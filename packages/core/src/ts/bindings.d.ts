@@ -80,6 +80,32 @@ export declare class NativeArray {
   schema(): any;
 }
 
+export declare class NativeSubarray {
+  constructor(ctx: NativeContext, array: NativeArray);
+  addRange(dimName: string, start: number, end: number): void;
+  close(): void;
+}
+
+export declare class NativeQueryCondition {
+  constructor(ctx: NativeContext);
+  init(attribute: string, value: ArrayBufferView, op: string): void;
+  combine(qc: NativeQueryCondition, op: string): NativeQueryCondition;
+  negate(): NativeQueryCondition;
+}
+
+export declare class NativeQuery {
+  constructor(ctx: NativeContext, array: NativeArray, queryType: string);
+  setLayout(layout: string): void;
+  setSubarray(subarray: NativeSubarray): void;
+  setCondition(condition: NativeQueryCondition): void;
+  setDataBuffer(attribute: string, buffer: ArrayBufferView): void;
+  submit(): string;
+  submitAsync(): Promise<string>;
+  queryStatus(): string;
+  resultBufferElements(): Record<string, { first: number, second: number }>;
+  close(): void;
+}
+
 export interface TileDBNativeBindings {
   Context: typeof NativeContext;
   Config: typeof NativeConfig;
@@ -89,4 +115,7 @@ export interface TileDBNativeBindings {
   Attribute: typeof NativeAttribute;
   ArraySchema: typeof NativeArraySchema;
   Array: typeof NativeArray;
+  Subarray: typeof NativeSubarray;
+  QueryCondition: typeof NativeQueryCondition;
+  Query: typeof NativeQuery;
 }

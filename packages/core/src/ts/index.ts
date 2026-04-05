@@ -7,6 +7,9 @@ import {
   NativeAttribute,
   NativeArraySchema,
   NativeArray,
+  NativeSubarray,
+  NativeQueryCondition,
+  NativeQuery,
   TileDBVersion,
   TileDBNativeBindings
 } from './bindings';
@@ -203,7 +206,7 @@ export class ArraySchema {
 export class TileDBArray {
   private nativeArray: NativeArray | null;
 
-  public static create(ctx: Context, uri: string, schema: ArraySchema): boolean {
+  public static create(uri: string, schema: ArraySchema): boolean {
     return nativeData!.Array.create(uri, schema.native);
   }
 
@@ -231,6 +234,120 @@ export class TileDBArray {
   public uri(): string { return this.native.uri(); }
   public isOpen(): boolean { return this.native.isOpen(); }
   public schema(): any { return this.native.schema(); }
+}
+
+export class Subarray {
+  private nativeSubarray: NativeSubarray | null;
+
+  constructor(ctx: Context, array: TileDBArray) {
+    this.nativeSubarray = new nativeData!.Subarray(ctx.native, array.native);
+  }
+
+  public get native(): NativeSubarray {
+    if (!this.nativeSubarray) throw new Error('Subarray closed');
+    return this.nativeSubarray;
+  }
+
+  public addRange(dimName: string, start: number, end: number): void {
+    this.native.addRange(dimName, start, end);
+  }
+
+  public close(): void {
+    if (this.nativeSubarray) {
+      this.nativeSubarray.close();
+      this.nativeSubarray = null;
+    }
+  }
+}
+
+export class Query {
+  private nativeQuery: NativeQuery | null;
+
+  constructor(ctx: Context, array: TileDBArray, queryType: 'READ' | 'WRITE' | 'DELETE' | 'UPDATE' | 'MODIFY_EXCLUSIVE') {
+    this.nativeQuery = new nativeData!.Query(ctx.native, array.native, queryType);
+  }
+
+  public get native(): NativeQuery {
+    if (!this.nativeQuery) throw new Error('Query closed');
+    return this.nativeQuery;
+  }
+
+  public setLayout(layout: 'ROW_MAJOR' | 'COL_MAJOR' | 'GLOBAL_ORDER' | 'UNORDERED'): void {
+    this.native.setLayout(layout);
+  }
+
+  public setSubarray(subarray: Subarray): void {
+    this.native.setSubarray(subarray.native);
+  }
+
+  public setCondition(condition: QueryCondition): void {
+    this.native.setCondition(condition.native);
+  }
+
+  public setDataBuffer(attribute: string, buffer: ArrayBufferView): void {
+    this.native.setDataBuffer(attribute, buffer);
+  }
+
+  public submit(): string {
+    return this.native.submit();
+  }
+
+  public async submitAsync(): Promise<string> {
+    return this.native.submitAsync();
+  }
+
+  public queryStatus(): string {
+    return this.native.queryStatus();
+  }
+  
+  public resultBufferElements(): Record<string, { first: number, second: number }> {
+    return this.native.resultBufferElements();
+  }
+
+  public close(): void {
+    if (this.nativeQuery) {
+      this.nativeQuery.close();
+      this.nativeQuery = null;
+    }
+  }
+}
+
+export class QueryCondition {
+  private nativeQC: NativeQueryCondition | null;
+
+  public static create(ctx: Context, attribute: string, value: ArrayBufferView, op: 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ'): QueryCondition {
+    const qc = new QueryCondition(ctx);
+    qc.init(attribute, value, op);
+    return qc;
+  }
+
+  constructor(ctx: Context) {
+    this.nativeQC = new nativeData!.QueryCondition(ctx.native);
+  }
+
+  public get native(): NativeQueryCondition {
+    if (!this.nativeQC) throw new Error('QueryCondition closed');
+    return this.nativeQC;
+  }
+
+  public init(attribute: string, value: ArrayBufferView, op: 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ'): void {
+    this.native.init(attribute, value, op);
+  }
+
+  public combine(qc: QueryCondition, op: 'AND' | 'OR' | 'NOT'): QueryCondition {
+    const combinedNative = this.native.combine(qc.native, op);
+    // Wrap the returned native object
+    const newQc = Object.create(QueryCondition.prototype);
+    newQc.nativeQC = combinedNative;
+    return newQc;
+  }
+
+  public negate(): QueryCondition {
+    const negatedNative = this.native.negate();
+    const newQc = Object.create(QueryCondition.prototype);
+    newQc.nativeQC = negatedNative;
+    return newQc;
+  }
 }
 
 export { TileDBVersion };

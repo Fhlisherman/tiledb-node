@@ -13,6 +13,8 @@ public:
     ArrayWrapper(const Napi::CallbackInfo& info);
     ~ArrayWrapper();
 
+    tiledb::Array& get_array() { return *array_; }
+
 private:
     static Napi::FunctionReference constructor;
 

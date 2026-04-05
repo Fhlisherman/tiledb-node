@@ -7,6 +7,9 @@
 #include "attribute_wrapper.h"
 #include "array_schema_wrapper.h"
 #include "array_wrapper.h"
+#include "subarray_wrapper.h"
+#include "query_condition_wrapper.h"
+#include "query_wrapper.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     ContextWrapper::Init(env, exports);
@@ -17,6 +20,9 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     AttributeWrapper::Init(env, exports);
     ArraySchemaWrapper::Init(env, exports);
     ArrayWrapper::Init(env, exports);
+    SubarrayWrapper::Init(env, exports);
+    QueryConditionWrapper::Init(env, exports);
+    QueryWrapper::Init(env, exports);
     return exports;
 }
 

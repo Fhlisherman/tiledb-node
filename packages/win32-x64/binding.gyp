@@ -10,7 +10,10 @@
       "src/cpp/domain_wrapper.cpp",
       "src/cpp/attribute_wrapper.cpp",
       "src/cpp/array_schema_wrapper.cpp",
-      "src/cpp/array_wrapper.cpp"
+      "src/cpp/array_wrapper.cpp",
+      "src/cpp/subarray_wrapper.cpp",
+      "src/cpp/query_condition_wrapper.cpp",
+      "src/cpp/query_wrapper.cpp"
     ],
     "include_dirs": [
       "<!@(node -p \"require('node-addon-api').include\")",
