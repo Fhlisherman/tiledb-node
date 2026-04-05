@@ -44,16 +44,15 @@ Napi::Object ArrayWrapper::Init(Napi::Env env, Napi::Object exports) {
 Napi::Value ArrayWrapper::Create(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
 
-    if (info.Length() < 3 || !info[1].IsString()) {
-        Napi::TypeError::New(env, "Expected (Context ctx, string uri, ArraySchema schema)")
+    if (info.Length() < 2 || !info[0].IsString()) {
+        Napi::TypeError::New(env, "Expected (string uri, ArraySchema schema)")
             .ThrowAsJavaScriptException();
         return env.Undefined();
     }
 
     try {
-        ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
-        std::string uri = info[1].As<Napi::String>().Utf8Value();
-        ArraySchemaWrapper* schema_wrap = Napi::ObjectWrap<ArraySchemaWrapper>::Unwrap(info[2].As<Napi::Object>());
+        std::string uri = info[0].As<Napi::String>().Utf8Value();
+        ArraySchemaWrapper* schema_wrap = Napi::ObjectWrap<ArraySchemaWrapper>::Unwrap(info[1].As<Napi::Object>());
         
         tiledb::Array::create(uri, schema_wrap->get_schema());
         return Napi::Boolean::New(env, true);

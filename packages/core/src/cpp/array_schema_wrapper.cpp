@@ -40,7 +40,6 @@ Napi::Object ArraySchemaWrapper::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("check", &ArraySchemaWrapper::Check),
         InstanceMethod("arrayType", &ArraySchemaWrapper::GetArrayType),
         InstanceMethod("attributeCount", &ArraySchemaWrapper::GetAttributeCount),
-        InstanceMethod("dump", &ArraySchemaWrapper::Dump),
         InstanceMethod("close", &ArraySchemaWrapper::Close)
     });
 
@@ -198,20 +197,6 @@ Napi::Value ArraySchemaWrapper::GetAttributeCount(const Napi::CallbackInfo& info
     Napi::Env env = info.Env();
     try {
         return Napi::Number::New(env, static_cast<double>(this->schema_->attribute_num()));
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
-}
-
-Napi::Value ArraySchemaWrapper::Dump(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    try {
-        // Capture dump output to string
-        std::stringstream ss;
-        auto old_buf = stdout;
-        this->schema_->dump(ss);
-        return Napi::String::New(env, ss.str());
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
         return env.Undefined();

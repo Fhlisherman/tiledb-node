@@ -27,7 +27,6 @@ private:
     Napi::Value Check(const Napi::CallbackInfo& info);
     Napi::Value GetArrayType(const Napi::CallbackInfo& info);
     Napi::Value GetAttributeCount(const Napi::CallbackInfo& info);
-    Napi::Value Dump(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::ArraySchema* schema_;
