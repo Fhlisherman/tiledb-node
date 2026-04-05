@@ -53,3 +53,8 @@ Napi::Value ContextWrapper::GetVersion(const Napi::CallbackInfo& info) {
     
     return result;
 }
+
+tiledb::Context& ContextWrapper::get_context() {
+    return *this->ctx_;
+}
+

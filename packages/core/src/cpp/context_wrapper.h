@@ -13,6 +13,8 @@ public:
     ContextWrapper(const Napi::CallbackInfo& info);
     ~ContextWrapper();
 
+    tiledb::Context& get_context();
+
 private:
     static Napi::FunctionReference constructor;
 
@@ -22,3 +24,4 @@ private:
 
     tiledb::Context* ctx_;
 };
+
