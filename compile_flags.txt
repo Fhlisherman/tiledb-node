@@ -1,0 +1,6 @@
+-I./packages/darwin-arm64/node_modules/node-addon-api
+-I/Users/adarfhlisher/Library/Caches/node-gyp/25.2.1/include/node
+-I/usr/local/include
+-I/opt/homebrew/include
+-std=c++17
+-DNAPI_CPP_EXCEPTIONS

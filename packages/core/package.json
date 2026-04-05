@@ -1,0 +1,22 @@
+{
+  "name": "tiledb-node",
+  "version": "1.0.0",
+  "description": "High-performance native Node.js binding for the TileDB C++ library",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "optionalDependencies": {
+    "@tiledb-node/darwin-arm64": "workspace:*",
+    "@tiledb-node/darwin-x64": "workspace:*",
+    "@tiledb-node/linux-arm64": "workspace:*",
+    "@tiledb-node/linux-x64": "workspace:*",
+    "@tiledb-node/win32-x64": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
