@@ -1,4 +1,5 @@
 #include "context_wrapper.h"
+#include "config_wrapper.h"
 
 Napi::FunctionReference ContextWrapper::constructor;
 
@@ -19,8 +20,12 @@ ContextWrapper::ContextWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWra
     Napi::Env env = info.Env();
 
     try {
-        // Initialize a default TileDB context
-        this->ctx_ = new tiledb::Context();
+        if (info.Length() >= 1 && info[0].IsObject()) {
+            ConfigWrapper* config_wrap = Napi::ObjectWrap<ConfigWrapper>::Unwrap(info[0].As<Napi::Object>());
+            this->ctx_ = new tiledb::Context(config_wrap->get_config());
+        } else {
+            this->ctx_ = new tiledb::Context();
+        }
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
     }

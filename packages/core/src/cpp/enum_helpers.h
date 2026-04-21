@@ -93,6 +93,17 @@ inline tiledb_query_type_t parse_query_type(const std::string& query_type_str) {
     throw std::invalid_argument("Unknown query type: " + query_type_str);
 }
 
+inline std::string query_type_to_string(tiledb_query_type_t type) {
+    switch (type) {
+        case TILEDB_READ: return "READ";
+        case TILEDB_WRITE: return "WRITE";
+        case TILEDB_DELETE: return "DELETE";
+        case TILEDB_UPDATE: return "UPDATE";
+        case TILEDB_MODIFY_EXCLUSIVE: return "MODIFY_EXCLUSIVE";
+        default: return "UNKNOWN";
+    }
+}
+
 inline tiledb_query_condition_op_t parse_query_condition_op(const std::string& op_str) {
     if (op_str == "LT") return TILEDB_LT;
     if (op_str == "LE") return TILEDB_LE;

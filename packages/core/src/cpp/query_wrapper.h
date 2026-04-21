@@ -3,7 +3,8 @@
 
 #include <napi.h>
 #include <tiledb/tiledb>
-#include <vector>
+#include <unordered_map>
+#include <string>
 #include "context_wrapper.h"
 #include "array_wrapper.h"
 #include "subarray_wrapper.h"
@@ -22,6 +23,9 @@ private:
     Napi::Value SetSubarray(const Napi::CallbackInfo& info);
     Napi::Value SetCondition(const Napi::CallbackInfo& info);
     Napi::Value SetDataBuffer(const Napi::CallbackInfo& info);
+    Napi::Value SetOffsetsBuffer(const Napi::CallbackInfo& info);
+    Napi::Value SetValidityBuffer(const Napi::CallbackInfo& info);
+    Napi::Value AddUpdateValue(const Napi::CallbackInfo& info);
     Napi::Value Submit(const Napi::CallbackInfo& info);
     Napi::Value SubmitAsync(const Napi::CallbackInfo& info);
     Napi::Value QueryStatus(const Napi::CallbackInfo& info);
@@ -29,7 +33,7 @@ private:
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::Query* query_;
-    std::vector<Napi::Reference<Napi::Value>> pinned_buffers_;
+    std::unordered_map<std::string, Napi::Reference<Napi::Value>> pinned_buffers_;
 };
 
 #endif

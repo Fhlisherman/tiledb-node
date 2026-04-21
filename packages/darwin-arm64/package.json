@@ -9,10 +9,10 @@
     "build": "node-gyp rebuild"
   },
   "dependencies": {
-    "node-addon-api": "^8.7.0"
+    "node-addon-api": "^8.7.0",
+    "tar": "^7.5.11"
   },
   "devDependencies": {
-    "tar": "^7.5.11",
     "node-gyp": "^10.0.0"
   }
 }

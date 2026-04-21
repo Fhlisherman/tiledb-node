@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "build": "pnpm --filter '*' run build",
-    "clean": "rm -rf node_modules packages/*/node_modules packages/*/build packages/*/dist packages/*/tiledb-dist"
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/build packages/*/dist packages/*/tiledb-dist",
+    "test": "pnpm --filter '*' run test"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

@@ -1,6 +1,6 @@
 #include "attribute_wrapper.h"
 #include "context_wrapper.h"
-#include "filter_wrapper.h"
+#include "filter_list_wrapper.h"
 #include "enum_helpers.h"
 
 Napi::FunctionReference AttributeWrapper::constructor;
@@ -146,9 +146,8 @@ Napi::Value AttributeWrapper::SetFilterList(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
     try {
-        // We accept a native FilterList object
-        // For simplicity, we'll add individual filters via separate calls
-        Napi::TypeError::New(env, "Use filter list wrapper - not yet wired").ThrowAsJavaScriptException();
+        FilterListWrapper* fl_wrap = Napi::ObjectWrap<FilterListWrapper>::Unwrap(info[0].As<Napi::Object>());
+        this->attr_->set_filter_list(fl_wrap->get_filter_list());
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
     }

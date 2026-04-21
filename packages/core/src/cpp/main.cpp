@@ -2,6 +2,7 @@
 #include "context_wrapper.h"
 #include "config_wrapper.h"
 #include "filter_wrapper.h"
+#include "filter_list_wrapper.h"
 #include "dimension_wrapper.h"
 #include "domain_wrapper.h"
 #include "attribute_wrapper.h"
@@ -10,11 +11,15 @@
 #include "subarray_wrapper.h"
 #include "query_condition_wrapper.h"
 #include "query_wrapper.h"
+#include "object_wrapper.h"
+#include "group_wrapper.h"
+#include "vfs_wrapper.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     ContextWrapper::Init(env, exports);
     ConfigWrapper::Init(env, exports);
     FilterWrapper::Init(env, exports);
+    FilterListWrapper::Init(env, exports);
     DimensionWrapper::Init(env, exports);
     DomainWrapper::Init(env, exports);
     AttributeWrapper::Init(env, exports);
@@ -23,6 +28,9 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     SubarrayWrapper::Init(env, exports);
     QueryConditionWrapper::Init(env, exports);
     QueryWrapper::Init(env, exports);
+    ObjectWrapper::Init(env, exports);
+    GroupWrapper::Init(env, exports);
+    VFSWrapper::Init(env, exports);
     return exports;
 }
 

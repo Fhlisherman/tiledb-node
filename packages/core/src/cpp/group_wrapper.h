@@ -7,18 +7,18 @@
 #include <napi.h>
 #include <tiledb/tiledb>
 
-class ArrayWrapper : public Napi::ObjectWrap<ArrayWrapper> {
+class GroupWrapper : public Napi::ObjectWrap<GroupWrapper> {
 public:
     static Napi::Object Init(Napi::Env env, Napi::Object exports);
-    ArrayWrapper(const Napi::CallbackInfo& info);
-    ~ArrayWrapper();
+    GroupWrapper(const Napi::CallbackInfo& info);
+    ~GroupWrapper();
 
-    tiledb::Array& get_array() { return *array_; }
+    tiledb::Group& get_group() { return *group_; }
 
 private:
     static Napi::FunctionReference constructor;
 
-    // Static methods (all async / non-blocking)
+    // Static methods
     static Napi::Value Create(const Napi::CallbackInfo& info);
     static Napi::Value Consolidate(const Napi::CallbackInfo& info);
     static Napi::Value Vacuum(const Napi::CallbackInfo& info);
@@ -26,18 +26,23 @@ private:
     // Instance methods
     Napi::Value Open(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
-    Napi::Value GetQueryType(const Napi::CallbackInfo& info);
-    Napi::Value GetUri(const Napi::CallbackInfo& info);
     Napi::Value IsOpen(const Napi::CallbackInfo& info);
-    Napi::Value GetSchema(const Napi::CallbackInfo& info);
+    Napi::Value GetUri(const Napi::CallbackInfo& info);
+    Napi::Value GetQueryType(const Napi::CallbackInfo& info);
 
-    // Metadata methods
+    // Membership
+    Napi::Value AddMember(const Napi::CallbackInfo& info);
+    Napi::Value RemoveMember(const Napi::CallbackInfo& info);
+    Napi::Value GetMemberCount(const Napi::CallbackInfo& info);
+    Napi::Value GetMemberByIndex(const Napi::CallbackInfo& info);
+
+    // Metadata Support
     Napi::Value PutMetadata(const Napi::CallbackInfo& info);
     Napi::Value GetMetadata(const Napi::CallbackInfo& info);
     Napi::Value DeleteMetadata(const Napi::CallbackInfo& info);
     Napi::Value GetMetadataNum(const Napi::CallbackInfo& info);
     Napi::Value GetMetadataByIndex(const Napi::CallbackInfo& info);
 
-    tiledb::Array* array_;
+    tiledb::Group* group_;
     tiledb::Context* ctx_ref_;
 };

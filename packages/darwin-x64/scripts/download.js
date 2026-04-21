@@ -34,16 +34,36 @@ https.get(URL, (response) => {
       process.exit(1);
     }
     
-    res.pipe(tar.x({
-      C: DEST_DIR,
-      strip: 1
-    }))
-    .on('finish', () => {
-      console.log('Extraction complete.');
-    })
-    .on('error', (err) => {
-      console.error('Extraction error:', err);
-      process.exit(1);
+    const crypto = require('crypto');
+    const EXPECTED_HASH = "3592fbc675b2e803112c7a1f1248ea29ccf7eef5767236cff515646380792398";
+    const tempFilePath = path.join(__dirname, 'temp.tar.gz');
+    const fileStream = fs.createWriteStream(tempFilePath);
+    const hash = crypto.createHash('sha256');
+    
+    res.pipe(fileStream);
+    res.on('data', chunk => hash.update(chunk));
+    
+    res.on('end', () => {
+      const digest = hash.digest('hex');
+      if (digest !== EXPECTED_HASH) {
+        fs.unlinkSync(tempFilePath);
+        console.error('Checksum mismatch! Possible MITM or tampered binary.');
+        process.exit(1);
+      }
+      
+      const readStream = fs.createReadStream(tempFilePath);
+      readStream.pipe(tar.x({
+        C: DEST_DIR,
+        strip: 1
+      }))
+      .on('finish', () => {
+        console.log('Extraction complete.');
+        try { fs.unlinkSync(tempFilePath); } catch (e) {}
+      })
+      .on('error', (err) => {
+        console.error('Extraction error:', err);
+        process.exit(1);
+      });
     });
   }
 }).on('error', (err) => {

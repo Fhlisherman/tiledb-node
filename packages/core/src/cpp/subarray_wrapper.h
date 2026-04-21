@@ -21,6 +21,7 @@ private:
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::Subarray* subarray_;
+    tiledb::Array* array_ref_;
 };
 
 #endif

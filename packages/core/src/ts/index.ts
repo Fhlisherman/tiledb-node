@@ -1,7 +1,8 @@
-import {
+import type {
   NativeContext,
   NativeConfig,
   NativeFilter,
+  NativeFilterList,
   NativeDimension,
   NativeDomain,
   NativeAttribute,
@@ -10,8 +11,9 @@ import {
   NativeSubarray,
   NativeQueryCondition,
   NativeQuery,
-  TileDBVersion,
-  TileDBNativeBindings
+  TileDBNativeBindings,
+  NativeGroup,
+  NativeVFS
 } from './bindings';
 
 let nativeData: TileDBNativeBindings | undefined;
@@ -37,12 +39,29 @@ if (!nativeData) {
   throw new Error(`Failed to load TileDB native bindings for ${platform}-${arch}. Ensure the optional dependency is installed.`);
 }
 
+export class TileDBError extends Error {
+  public component?: string;
+  public details?: string;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'TileDBError';
+    Object.setPrototypeOf(this, new.target.prototype);
+
+    const match = message.match(/\[TileDB::(.*?)\]\s+Error:\s+(.*)/i);
+    if (match) {
+      this.component = match[1].trim();
+      this.details = match[2].trim();
+    }
+  }
+}
+
 export class Context {
   // @ts-ignore
   private nativeContext: NativeContext | null;
 
-  constructor() {
-    this.nativeContext = new nativeData!.Context();
+  constructor(config?: Config) {
+    this.nativeContext = new nativeData!.Context(config?.native);
   }
 
   public get native(): NativeContext {
@@ -68,6 +87,11 @@ export class Config {
 
   constructor() {
     this.nativeConfig = new nativeData!.Config();
+  }
+
+  public get native(): NativeConfig {
+    if (!this.nativeConfig) throw new Error('Config closed');
+    return this.nativeConfig;
   }
 
   public set(param: string, value: string): void {
@@ -109,6 +133,10 @@ export class Dimension {
   public type(): string { return this.native.type(); }
   public domain(): string { return this.native.domain(); }
   public tileExtent(): string { return this.native.tileExtent(); }
+
+  public setFilterList(filterList: FilterList): void {
+    this.native.setFilterList(filterList.native);
+  }
 
   public close(): void {
     if (this.nativeDimension) {
@@ -165,6 +193,10 @@ export class Attribute {
   public setNullable(nullable: boolean): void { this.native.setNullable(nullable); }
   public nullable(): boolean { return this.native.nullable(); }
 
+  public setFilterList(filterList: FilterList): void {
+    this.native.setFilterList(filterList.native);
+  }
+
   public close(): void {
     if (this.nativeAttribute) {
       this.nativeAttribute.close();
@@ -206,8 +238,16 @@ export class ArraySchema {
 export class TileDBArray {
   private nativeArray: NativeArray | null;
 
-  public static create(uri: string, schema: ArraySchema): boolean {
+  public static create(uri: string, schema: ArraySchema): Promise<boolean> {
     return nativeData!.Array.create(uri, schema.native);
+  }
+
+  public static consolidate(ctx: Context, uri: string, config?: Config): Promise<void> {
+    return nativeData!.Array.consolidate(ctx.native, uri, config?.native);
+  }
+
+  public static vacuum(ctx: Context, uri: string, config?: Config): Promise<void> {
+    return nativeData!.Array.vacuum(ctx.native, uri, config?.native);
   }
 
   constructor(ctx: Context, uri: string, queryType?: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE') {
@@ -219,8 +259,8 @@ export class TileDBArray {
     return this.nativeArray;
   }
 
-  public open(queryType: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE'): void {
-    this.native.open(queryType);
+  public open(queryType: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE'): Promise<void> {
+    return this.native.open(queryType);
   }
 
   public close(): void {
@@ -234,6 +274,26 @@ export class TileDBArray {
   public uri(): string { return this.native.uri(); }
   public isOpen(): boolean { return this.native.isOpen(); }
   public schema(): any { return this.native.schema(); }
+
+  public putMetadata(key: string, datatype: string, value: any): void {
+    this.native.putMetadata(key, datatype, value);
+  }
+
+  public getMetadata(key: string): any {
+    return this.native.getMetadata(key);
+  }
+
+  public deleteMetadata(key: string): void {
+    this.native.deleteMetadata(key);
+  }
+
+  public getMetadataNum(): number {
+    return this.native.getMetadataNum();
+  }
+
+  public getMetadataByIndex(index: number): { key: string, type: string, value: any } {
+    return this.native.getMetadataByIndex(index);
+  }
 }
 
 export class Subarray {
@@ -284,8 +344,39 @@ export class Query {
     this.native.setCondition(condition.native);
   }
 
-  public setDataBuffer(attribute: string, buffer: ArrayBufferView): void {
-    this.native.setDataBuffer(attribute, buffer);
+  public setDataBuffer(attribute: string, buffer: ArrayBufferView | string[]): void {
+    if (Array.isArray(buffer)) {
+      const encoder = new TextEncoder();
+      const encodedStrings = buffer.map(str => encoder.encode(str));
+      const totalBytes = encodedStrings.reduce((acc, curr) => acc + curr.length, 0);
+
+      const offsets = new BigUint64Array(buffer.length);
+      const dataBuffer = new Uint8Array(totalBytes);
+
+      let currentOffset = 0;
+      for (let i = 0; i < encodedStrings.length; i++) {
+        offsets[i] = BigInt(currentOffset);
+        dataBuffer.set(encodedStrings[i], currentOffset);
+        currentOffset += encodedStrings[i].length;
+      }
+
+      this.native.setOffsetsBuffer(attribute, offsets);
+      this.native.setDataBuffer(attribute, dataBuffer);
+    } else {
+      this.native.setDataBuffer(attribute, buffer);
+    }
+  }
+
+  public setOffsetsBuffer(attribute: string, buffer: BigUint64Array | BigInt64Array): void {
+    this.native.setOffsetsBuffer(attribute, buffer);
+  }
+
+  public setValidityBuffer(attribute: string, buffer: Uint8Array): void {
+    this.native.setValidityBuffer(attribute, buffer);
+  }
+
+  public addUpdateValue(attribute: string, value: any, datatype: string): void {
+    this.native.addUpdateValue(attribute, value, datatype);
   }
 
   public submit(): string {
@@ -350,4 +441,312 @@ export class QueryCondition {
   }
 }
 
+export class TileDBObject {
+  public static type(ctx: Context, uri: string): string {
+    return nativeData!.TileDBObject.type(ctx.native, uri);
+  }
+
+  public static remove(ctx: Context, uri: string): void {
+    nativeData!.TileDBObject.remove(ctx.native, uri);
+  }
+
+  public static move(ctx: Context, oldUri: string, newUri: string): void {
+    nativeData!.TileDBObject.move(ctx.native, oldUri, newUri);
+  }
+
+  public static ls(ctx: Context, uri: string, callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
+    const results = nativeData!.TileDBObject.ls(ctx.native, uri);
+    if (callback) {
+      for (const res of results) {
+        callback(res.type, res.uri);
+      }
+    }
+    return results;
+  }
+
+  public static walk(ctx: Context, uri: string, order: 'PREORDER' | 'POSTORDER', callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
+    const results = nativeData!.TileDBObject.walk(ctx.native, uri, order);
+    if (callback) {
+      for (const res of results) {
+        callback(res.type, res.uri);
+      }
+    }
+    return results;
+  }
+}
+
+export class TileDBGroup {
+  private nativeGroup: NativeGroup | null;
+
+  public static create(ctx: Context, uri: string): boolean {
+    return nativeData!.Group.create(ctx.native, uri);
+  }
+
+  public static consolidate(ctx: Context, uri: string, config?: Config): void {
+    nativeData!.Group.consolidate(ctx.native, uri, config?.native);
+  }
+
+  public static vacuum(ctx: Context, uri: string, config?: Config): void {
+    nativeData!.Group.vacuum(ctx.native, uri, config?.native);
+  }
+
+  constructor(ctx: Context, uri: string, queryType?: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE') {
+    this.nativeGroup = new nativeData!.Group(ctx.native, uri, queryType);
+  }
+
+  public get native(): NativeGroup {
+    if (!this.nativeGroup) throw new Error('Group closed');
+    return this.nativeGroup;
+  }
+
+  public open(queryType: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE'): void {
+    this.native.open(queryType);
+  }
+
+  public close(): void {
+    if (this.nativeGroup) {
+      this.nativeGroup.close();
+      this.nativeGroup = null;
+    }
+  }
+
+  public isOpen(): boolean { return this.native.isOpen(); }
+  public uri(): string { return this.native.uri(); }
+  public queryType(): string { return this.native.queryType(); }
+
+  public addMember(uri: string, relative?: boolean, name?: string): void {
+    this.native.addMember(uri, relative, name);
+  }
+
+  public removeMember(name_or_uri: string): void {
+    this.native.removeMember(name_or_uri);
+  }
+
+  public getMemberCount(): number {
+    return this.native.getMemberCount();
+  }
+
+  public getMemberByIndex(index: number): { uri: string, type: string, name: string | null } {
+    return this.native.getMemberByIndex(index);
+  }
+
+  public putMetadata(key: string, datatype: string, value: any): void {
+    this.native.putMetadata(key, datatype, value);
+  }
+
+  public getMetadata(key: string): any {
+    return this.native.getMetadata(key);
+  }
+
+  public deleteMetadata(key: string): void {
+    this.native.deleteMetadata(key);
+  }
+
+  public getMetadataNum(): number {
+    return this.native.getMetadataNum();
+  }
+
+  public getMetadataByIndex(index: number): { key: string, type: string, value: any } {
+    return this.native.getMetadataByIndex(index);
+  }
+}
+
+export class FilterList {
+  private nativeFilterList: NativeFilterList | null;
+
+  constructor(ctx: Context) {
+    this.nativeFilterList = new nativeData!.FilterList(ctx.native);
+  }
+
+  public get native(): NativeFilterList {
+    if (!this.nativeFilterList) throw new Error('FilterList closed');
+    return this.nativeFilterList;
+  }
+
+  public addFilter(filter: Filter): FilterList {
+    this.native.addFilter(filter.native);
+    return this;
+  }
+
+  public setChunkSize(size: number): FilterList {
+    this.native.setChunkSize(size);
+    return this;
+  }
+
+  public close(): void {
+    if (this.nativeFilterList) {
+      this.nativeFilterList.close();
+      this.nativeFilterList = null;
+    }
+  }
+}
+
+export class Filter {
+  private nativeFilter: NativeFilter | null;
+
+  constructor(ctx: Context, filterType: string) {
+    this.nativeFilter = new nativeData!.Filter(ctx.native, filterType);
+  }
+
+  public get native(): NativeFilter {
+    if (!this.nativeFilter) throw new Error('Filter closed');
+    return this.nativeFilter;
+  }
+
+  public type(): string { return this.native.type(); }
+
+  public setOption(option: string, value: number): Filter {
+    this.native.setOption(option, value);
+    return this;
+  }
+
+  public close(): void {
+    if (this.nativeFilter) {
+      this.nativeFilter.close();
+      this.nativeFilter = null;
+    }
+  }
+}
+
+export class VFS {
+  private nativeVFS: NativeVFS | null;
+
+  constructor(ctx: Context, config?: Config) {
+    this.nativeVFS = new nativeData!.VFS(ctx.native, config?.native);
+  }
+
+  public get native(): NativeVFS {
+    if (!this.nativeVFS) throw new Error('VFS closed');
+    return this.nativeVFS;
+  }
+
+  public createBucket(uri: string): void { this.native.createBucket(uri); }
+  public removeBucket(uri: string): void { this.native.removeBucket(uri); }
+  public isBucket(uri: string): boolean { return this.native.isBucket(uri); }
+  public emptyBucket(uri: string): void { this.native.emptyBucket(uri); }
+  public isEmptyBucket(uri: string): boolean { return this.native.isEmptyBucket(uri); }
+  
+  public createDir(uri: string): void { this.native.createDir(uri); }
+  public isDir(uri: string): boolean { return this.native.isDir(uri); }
+  public removeDir(uri: string): void { this.native.removeDir(uri); }
+  public dirSize(uri: string): number { return this.native.dirSize(uri); }
+
+  public isFile(uri: string): boolean { return this.native.isFile(uri); }
+  public removeFile(uri: string): void { this.native.removeFile(uri); }
+  public fileSize(uri: string): number { return this.native.fileSize(uri); }
+  
+  public ls(uri: string): string[] { return this.native.ls(uri); }
+
+  public moveFile(oldUri: string, newUri: string): void { this.native.moveFile(oldUri, newUri); }
+  public moveDir(oldUri: string, newUri: string): void { this.native.moveDir(oldUri, newUri); }
+  public copyFile(oldUri: string, newUri: string): void { this.native.copyFile(oldUri, newUri); }
+  public copyDir(oldUri: string, newUri: string): void { this.native.copyDir(oldUri, newUri); }
+  
+  public touch(uri: string): void { this.native.touch(uri); }
+
+  public open(uri: string, mode: 'read' | 'write' | 'append' | 'READ' | 'WRITE' | 'APPEND'): void {
+    this.native.open(uri, mode);
+  }
+
+  public read(offset: number, size: number): Buffer {
+    return this.native.read(offset, size);
+  }
+
+  public write(buffer: Buffer): void {
+    this.native.write(buffer);
+  }
+
+  public close(): void {
+    if (this.nativeVFS) {
+      this.nativeVFS.close();
+      this.nativeVFS = null;
+    }
+  }
+}
+
 export { TileDBVersion };
+
+const exportedClasses = [Context, Config, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Subarray, Query, QueryCondition, TileDBObject, TileDBGroup, VFS];
+
+exportedClasses.forEach(ctor => {
+  const proto = ctor.prototype;
+  for (const prop of Object.getOwnPropertyNames(proto)) {
+    const desc = Object.getOwnPropertyDescriptor(proto, prop);
+    if (desc && typeof desc.value === 'function' && prop !== 'constructor') {
+      const original = desc.value;
+      (proto as any)[prop] = function(...args: any[]) {
+        try {
+          const res = original.apply(this, args);
+          if (res && typeof res.catch === 'function') {
+            return res.catch((e: any) => {
+              if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+                const tde = new TileDBError(e.message);
+                tde.stack = e.stack;
+                throw tde;
+              }
+              throw e;
+            });
+          }
+          return res;
+        } catch (e: any) {
+          if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+            const tde = new TileDBError(e.message);
+            tde.stack = e.stack;
+            throw tde;
+          }
+          throw e;
+        }
+      };
+    }
+    if (desc && desc.get) {
+       const originalGet = desc.get;
+       Object.defineProperty(proto, prop, {
+           get: function() {
+              try {
+                  return originalGet.apply(this);
+              } catch(e: any) {
+                  if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+                      const tde = new TileDBError(e.message);
+                      tde.stack = e.stack;
+                      throw tde;
+                  }
+                  throw e;
+              }
+           },
+           set: desc.set,
+           enumerable: desc.enumerable,
+           configurable: desc.configurable
+       });
+    }
+  }
+
+  for (const prop of Object.getOwnPropertyNames(ctor)) {
+    const desc = Object.getOwnPropertyDescriptor(ctor, prop);
+    if (desc && typeof desc.value === 'function' && prop !== 'name' && prop !== 'length' && prop !== 'prototype') {
+      const original = desc.value;
+      (ctor as any)[prop] = function(...args: any[]) {
+        try {
+          const res = original.apply(this, args);
+          if (res && typeof res.catch === 'function') {
+            return res.catch((e: any) => {
+              if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+                const tde = new TileDBError(e.message);
+                tde.stack = e.stack;
+                throw tde;
+              }
+              throw e;
+            });
+          }
+          return res;
+        } catch (e: any) {
+          if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+            const tde = new TileDBError(e.message);
+            tde.stack = e.stack;
+            throw tde;
+          }
+          throw e;
+        }
+      };
+    }
+  }
+});

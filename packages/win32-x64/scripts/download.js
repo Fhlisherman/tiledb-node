@@ -34,7 +34,25 @@ https.get(URL, (response) => {
       process.exit(1);
     }
     
-    res.pipe(unzipper.Parse())
+    const crypto = require('crypto');
+    const EXPECTED_HASH = "6a997bd1ec3dd52569da704ce0ceac4e4b547a603feb5edb41617b5b9c4909bb";
+    const tempFilePath = path.join(__dirname, 'temp.zip');
+    const fileStream = fs.createWriteStream(tempFilePath);
+    const hash = crypto.createHash('sha256');
+    
+    res.pipe(fileStream);
+    res.on('data', chunk => hash.update(chunk));
+    
+    res.on('end', () => {
+      const digest = hash.digest('hex');
+      if (digest !== EXPECTED_HASH) {
+        fs.unlinkSync(tempFilePath);
+        console.error('Checksum mismatch! Possible MITM or tampered binary.');
+        process.exit(1);
+      }
+      
+      const readStream = fs.createReadStream(tempFilePath);
+      readStream.pipe(unzipper.Parse())
       .on('entry', function (entry) {
         const fileName = entry.path.replace(/\\/g, '/');
         const firstSlash = fileName.indexOf('/');
@@ -65,11 +83,13 @@ https.get(URL, (response) => {
       })
       .on('close', () => {
         console.log('Extraction complete.');
+        try { fs.unlinkSync(tempFilePath); } catch (e) {}
       })
       .on('error', (err) => {
         console.error('Extraction error:', err);
         process.exit(1);
       });
+    });
   }
 }).on('error', (err) => {
   console.error('Download error:', err);

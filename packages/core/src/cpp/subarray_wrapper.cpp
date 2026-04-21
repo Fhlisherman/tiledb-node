@@ -16,7 +16,7 @@ Napi::Object SubarrayWrapper::Init(Napi::Env env, Napi::Object exports) {
     return exports;
 }
 
-SubarrayWrapper::SubarrayWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<SubarrayWrapper>(info), subarray_(nullptr) {
+SubarrayWrapper::SubarrayWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<SubarrayWrapper>(info), subarray_(nullptr), array_ref_(nullptr) {
     Napi::Env env = info.Env();
     if (info.Length() < 2 || !info[0].IsObject() || !info[1].IsObject()) {
         Napi::TypeError::New(env, "Expected (Context ctx, Array array)").ThrowAsJavaScriptException();
@@ -26,7 +26,8 @@ SubarrayWrapper::SubarrayWrapper(const Napi::CallbackInfo& info) : Napi::ObjectW
     try {
         ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
         ArrayWrapper* array_wrap = Napi::ObjectWrap<ArrayWrapper>::Unwrap(info[1].As<Napi::Object>());
-        this->subarray_ = new tiledb::Subarray(ctx_wrap->get_context(), array_wrap->get_array());
+        this->array_ref_ = &array_wrap->get_array();
+        this->subarray_ = new tiledb::Subarray(ctx_wrap->get_context(), *this->array_ref_);
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
     }
@@ -49,15 +50,69 @@ Napi::Value SubarrayWrapper::AddRange(const Napi::CallbackInfo& info) {
     try {
         std::string dim_name = info[0].As<Napi::String>().Utf8Value();
         
-        // Dynamically type checking numbers is tricky without knowing the dimension format upfront.
-        // For simplicity we will handle INT32 arrays for MVP if they pass JS numbers.
-        // JS Numbers are double max 53 bit integers. 
-        if (info[1].IsNumber() && info[2].IsNumber()) {
-            int32_t start = info[1].As<Napi::Number>().Int32Value();
-            int32_t end = info[2].As<Napi::Number>().Int32Value();
-            this->subarray_->add_range(dim_name, start, end);
+        tiledb_datatype_t dim_type = this->array_ref_->schema().domain().dimension(dim_name).type();
+
+        if (info[1].IsString() && info[2].IsString()) {
+             std::string start = info[1].As<Napi::String>().Utf8Value();
+             std::string end = info[2].As<Napi::String>().Utf8Value();
+             this->subarray_->add_range(dim_name, start, end);
+        } else if (info[1].IsNumber() && info[2].IsNumber()) {
+             switch (dim_type) {
+                 case TILEDB_INT32: {
+                     int32_t start = info[1].As<Napi::Number>().Int32Value();
+                     int32_t end = info[2].As<Napi::Number>().Int32Value();
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 case TILEDB_FLOAT64: {
+                     double start = info[1].As<Napi::Number>().DoubleValue();
+                     double end = info[2].As<Napi::Number>().DoubleValue();
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 case TILEDB_FLOAT32: {
+                     float start = info[1].As<Napi::Number>().FloatValue();
+                     float end = info[2].As<Napi::Number>().FloatValue();
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 case TILEDB_INT16: {
+                     int16_t start = static_cast<int16_t>(info[1].As<Napi::Number>().Int32Value());
+                     int16_t end = static_cast<int16_t>(info[2].As<Napi::Number>().Int32Value());
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 case TILEDB_UINT32: {
+                     uint32_t start = info[1].As<Napi::Number>().Uint32Value();
+                     uint32_t end = info[2].As<Napi::Number>().Uint32Value();
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 default:
+                     Napi::TypeError::New(env, "Unsupported dimension datatype for numeric range").ThrowAsJavaScriptException();
+                     return env.Undefined();
+             }
+        } else if (info[1].IsBigInt() && info[2].IsBigInt()) {
+             bool lossless;
+             switch (dim_type) {
+                 case TILEDB_INT64: {
+                     int64_t start = info[1].As<Napi::BigInt>().Int64Value(&lossless);
+                     int64_t end = info[2].As<Napi::BigInt>().Int64Value(&lossless);
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 case TILEDB_UINT64: {
+                     uint64_t start = info[1].As<Napi::BigInt>().Uint64Value(&lossless);
+                     uint64_t end = info[2].As<Napi::BigInt>().Uint64Value(&lossless);
+                     this->subarray_->add_range(dim_name, start, end);
+                     break;
+                 }
+                 default:
+                     Napi::TypeError::New(env, "Unsupported dimension datatype for BigInt range").ThrowAsJavaScriptException();
+                     return env.Undefined();
+             }
         } else {
-             Napi::TypeError::New(env, "Types other than int32 ranges are not yet supported in this wrapper").ThrowAsJavaScriptException();
+             Napi::TypeError::New(env, "Range limits must be both Strings, both Numbers, or both BigInts").ThrowAsJavaScriptException();
         }
         
     } catch (const std::exception& e) {
