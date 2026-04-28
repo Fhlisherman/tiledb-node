@@ -2,7 +2,7 @@
 #include "context_wrapper.h"
 #include "config_wrapper.h"
 #include "enum_helpers.h"
-#include "metadata_helpers.h"
+#include "metadata_helpers.hpp"
 
 Napi::FunctionReference GroupWrapper::constructor;
 

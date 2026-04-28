@@ -3,7 +3,7 @@
 #include "config_wrapper.h"
 #include "array_schema_wrapper.h"
 #include "enum_helpers.h"
-#include "metadata_helpers.h"
+#include "metadata_helpers.hpp"
 #include <optional>
 #include <iostream>
 
