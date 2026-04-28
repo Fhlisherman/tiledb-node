@@ -60,6 +60,9 @@ Napi::Value ContextWrapper::GetVersion(const Napi::CallbackInfo& info) {
 }
 
 tiledb::Context& ContextWrapper::get_context() {
+    if (this->ctx_ == nullptr) {
+        throw std::runtime_error("Context has been closed");
+    }
     return *this->ctx_;
 }
 

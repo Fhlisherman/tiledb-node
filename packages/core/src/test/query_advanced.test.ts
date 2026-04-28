@@ -22,7 +22,7 @@ describe('Advanced Querying & I/O', () => {
     beforeAll(cleanup);
     afterAll(cleanup);
 
-    it('should write and read Nullable Attributes', () => {
+    it('should write and read Nullable Attributes', async () => {
         // Schema
         const dim = new Dimension(ctx, 'd1', 'INT32', 1, 10, 2);
         const dom = new Domain(ctx);
@@ -36,7 +36,7 @@ describe('Advanced Querying & I/O', () => {
         schema.addAttribute(attr);
 
         expect(schema.check()).toBe(true);
-        TileDBArray.create(arrayNullableUri, schema);
+        await TileDBArray.create(arrayNullableUri, schema);
 
         // Write
         const arrayWrite = new TileDBArray(ctx, arrayNullableUri, 'WRITE');
@@ -87,7 +87,7 @@ describe('Advanced Querying & I/O', () => {
         attr.close();
     });
 
-    it('should write and read Variable-length String Attributes via auto-offsets', () => {
+    it('should write and read Variable-length String Attributes via auto-offsets', async () => {
         // Schema
         const dim = new Dimension(ctx, 'id', 'INT32', 1, 100, 10);
         const dom = new Domain(ctx);
@@ -101,7 +101,7 @@ describe('Advanced Querying & I/O', () => {
         schema.addAttribute(attr);
 
         expect(schema.check()).toBe(true);
-        TileDBArray.create(arrayVarLenUri, schema);
+        await TileDBArray.create(arrayVarLenUri, schema);
 
         // Write
         const arrayWrite = new TileDBArray(ctx, arrayVarLenUri, 'WRITE');
@@ -150,7 +150,7 @@ describe('Advanced Querying & I/O', () => {
         attr.close();
     });
 
-    it('should support Subarray Multi-Range for querying disjoint subsets', () => {
+    it('should support Subarray Multi-Range for querying disjoint subsets', async () => {
         // Prepare Sparse array
         const dim = new Dimension(ctx, 'dim1', 'INT32', 1, 100, 10);
         const dom = new Domain(ctx);
@@ -159,7 +159,7 @@ describe('Advanced Querying & I/O', () => {
         const schema = new ArraySchema(ctx, 'SPARSE');
         schema.setDomain(dom);
         schema.addAttribute(attr);
-        TileDBArray.create(arrayMultiRangeUri, schema);
+        await TileDBArray.create(arrayMultiRangeUri, schema);
 
         // Write points [10, 20, 30, 40, 50]
         const arrayWrite = new TileDBArray(ctx, arrayMultiRangeUri, 'WRITE');

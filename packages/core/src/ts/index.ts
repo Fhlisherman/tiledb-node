@@ -13,7 +13,12 @@ import type {
   NativeQuery,
   TileDBNativeBindings,
   NativeGroup,
-  NativeVFS
+  NativeVFS,
+  NativeFragmentInfo,
+  NativeEnumeration,
+  NativeArraySchemaEvolution,
+  NativeConsolidationPlan,
+  TileDBVersion
 } from './bindings';
 
 let nativeData: TileDBNativeBindings | undefined;
@@ -56,6 +61,23 @@ export class TileDBError extends Error {
   }
 }
 
+
+export type Datatype = 'INT32' | 'INT64' | 'FLOAT32' | 'FLOAT64' | 'CHAR' | 'INT8' | 'UINT8' | 'INT16' | 'UINT16' | 'UINT32' | 'UINT64' | 'STRING_ASCII' | 'STRING_UTF8' | 'STRING_UTF16' | 'STRING_UTF32' | 'STRING_UCS2' | 'STRING_UCS4' | 'ANY' | 'DATETIME_YEAR' | 'DATETIME_MONTH' | 'DATETIME_WEEK' | 'DATETIME_DAY' | 'DATETIME_HR' | 'DATETIME_MIN' | 'DATETIME_SEC' | 'DATETIME_MS' | 'DATETIME_US' | 'DATETIME_NS' | 'DATETIME_PS' | 'DATETIME_FS' | 'DATETIME_AS' | 'TIME_HR' | 'TIME_MIN' | 'TIME_SEC' | 'TIME_MS' | 'TIME_US' | 'TIME_NS' | 'TIME_PS' | 'TIME_FS' | 'TIME_AS' | 'BLOB';
+export type FilterType = 'NONE' | 'GZIP' | 'ZSTD' | 'LZ4' | 'RLE' | 'BZIP2' | 'DOUBLE_DELTA' | 'BIT_WIDTH_REDUCTION' | 'BITSHUFFLE' | 'BYTESHUFFLE' | 'POSITIVE_DELTA';
+export type Layout = 'ROW_MAJOR' | 'COL_MAJOR' | 'GLOBAL_ORDER' | 'UNORDERED';
+export type ArrayType = 'DENSE' | 'SPARSE';
+export type QueryStatus = 'FAILED' | 'COMPLETED' | 'INPROGRESS' | 'INCOMPLETE' | 'UNINITIALIZED';
+export type QueryType = 'READ' | 'WRITE' | 'DELETE' | 'UPDATE' | 'MODIFY_EXCLUSIVE';
+export type ObjectOrder = 'PREORDER' | 'POSTORDER';
+export type QueryConditionOp = 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ';
+export type QueryConditionCombinationOp = 'AND' | 'OR' | 'NOT';
+export type VFSMode = 'read' | 'write' | 'append' | 'READ' | 'WRITE' | 'APPEND';
+
+
+/**
+ * Represents a TileDB Context.
+ * A Context encapsulates the TileDB state and configuration.
+ */
 export class Context {
   // @ts-ignore
   private nativeContext: NativeContext | null;
@@ -82,6 +104,10 @@ export class Context {
   }
 }
 
+/**
+ * Represents a TileDB Configuration.
+ * Used to set various parameters for the TileDB engine.
+ */
 export class Config {
   private nativeConfig: NativeConfig | null;
 
@@ -117,10 +143,14 @@ export class Config {
   }
 }
 
+/**
+ * Represents a TileDB Dimension.
+ * Dimensions define the axes of a TileDB array.
+ */
 export class Dimension {
   private nativeDimension: NativeDimension | null;
 
-  constructor(ctx: Context, name: string, datatype: string, domainLow: number, domainHigh: number, tileExtent: number) {
+  constructor(ctx: Context, name: string, datatype: Datatype, domainLow: number, domainHigh: number, tileExtent: number) {
     this.nativeDimension = new nativeData!.Dimension(ctx.native, name, datatype, domainLow, domainHigh, tileExtent);
   }
 
@@ -130,7 +160,7 @@ export class Dimension {
   }
 
   public name(): string { return this.native.name(); }
-  public type(): string { return this.native.type(); }
+  public type(): Datatype | FilterType | ArrayType | string { return this.native.type(); }
   public domain(): string { return this.native.domain(); }
   public tileExtent(): string { return this.native.tileExtent(); }
 
@@ -146,6 +176,10 @@ export class Dimension {
   }
 }
 
+/**
+ * Represents a TileDB Domain.
+ * A Domain is a collection of dimensions defining the bounds of a TileDB array.
+ */
 export class Domain {
   private nativeDomain: NativeDomain | null;
 
@@ -162,7 +196,7 @@ export class Domain {
     this.native.addDimension(dim.native);
   }
 
-  public type(): string { return this.native.type(); }
+  public type(): Datatype | FilterType | ArrayType | string { return this.native.type(); }
   public ndim(): number { return this.native.ndim(); }
   public dimensions(): any[] { return this.native.dimensions(); }
 
@@ -174,10 +208,14 @@ export class Domain {
   }
 }
 
+/**
+ * Represents a TileDB Attribute.
+ * Attributes are the values stored in the cells of a TileDB array.
+ */
 export class Attribute {
   private nativeAttribute: NativeAttribute | null;
 
-  constructor(ctx: Context, name: string, datatype: string) {
+  constructor(ctx: Context, name: string, datatype: Datatype) {
     this.nativeAttribute = new nativeData!.Attribute(ctx.native, name, datatype);
   }
 
@@ -187,7 +225,7 @@ export class Attribute {
   }
 
   public name(): string { return this.native.name(); }
-  public type(): string { return this.native.type(); }
+  public type(): Datatype | FilterType | ArrayType | string { return this.native.type(); }
   public cellValNum(): number { return this.native.cellValNum(); }
   public setCellValNum(num: number): void { this.native.setCellValNum(num); }
   public setNullable(nullable: boolean): void { this.native.setNullable(nullable); }
@@ -195,6 +233,10 @@ export class Attribute {
 
   public setFilterList(filterList: FilterList): void {
     this.native.setFilterList(filterList.native);
+  }
+
+  public setEnumerationName(ctx: Context, name: string): void {
+    this.native.setEnumerationName(ctx.native, name);
   }
 
   public close(): void {
@@ -205,10 +247,14 @@ export class Attribute {
   }
 }
 
+/**
+ * Represents a TileDB Array Schema.
+ * Describes the structure of a TileDB array including domain, attributes, and cell/tile orders.
+ */
 export class ArraySchema {
   private nativeSchema: NativeArraySchema | null;
 
-  constructor(ctx: Context, arrayType: 'DENSE' | 'SPARSE') {
+  constructor(ctx: Context, arrayType: ArrayType) {
     this.nativeSchema = new nativeData!.ArraySchema(ctx.native, arrayType);
   }
 
@@ -219,13 +265,21 @@ export class ArraySchema {
 
   public setDomain(domain: Domain): void { this.native.setDomain(domain.native); }
   public addAttribute(attr: Attribute): void { this.native.addAttribute(attr.native); }
-  public setCellOrder(layout: string): void { this.native.setCellOrder(layout); }
-  public setTileOrder(layout: string): void { this.native.setTileOrder(layout); }
+  public setCellOrder(layout: Layout): void { this.native.setCellOrder(layout); }
+  public setTileOrder(layout: Layout): void { this.native.setTileOrder(layout); }
   public setCapacity(capacity: number): void { this.native.setCapacity(capacity); }
   public setAllowsDups(allows: boolean): void { this.native.setAllowsDups(allows); }
   public check(): boolean { return this.native.check(); }
-  public arrayType(): string { return this.native.arrayType(); }
+  public arrayType(): ArrayType { return this.native.arrayType() as ArrayType; }
   public attributeCount(): number { return this.native.attributeCount(); }
+
+  public addEnumeration(ctx: Context, enmr: Enumeration): void {
+    this.native.addEnumeration(ctx.native, enmr.native);
+  }
+
+  public addDimensionLabel(ctx: Context, dimIdx: number, name: string, labelOrder: string, labelType: string): void {
+    this.native.addDimensionLabel(ctx.native, dimIdx, name, labelOrder, labelType);
+  }
 
   public close(): void {
     if (this.nativeSchema) {
@@ -235,6 +289,10 @@ export class ArraySchema {
   }
 }
 
+/**
+ * Represents a TileDB Array.
+ * Provides methods to create, open, read, write, and manage arrays.
+ */
 export class TileDBArray {
   private nativeArray: NativeArray | null;
 
@@ -250,7 +308,7 @@ export class TileDBArray {
     return nativeData!.Array.vacuum(ctx.native, uri, config?.native);
   }
 
-  constructor(ctx: Context, uri: string, queryType?: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE') {
+  constructor(ctx: Context, uri: string, queryType?: QueryType) {
     this.nativeArray = new nativeData!.Array(ctx.native, uri, queryType);
   }
 
@@ -259,7 +317,7 @@ export class TileDBArray {
     return this.nativeArray;
   }
 
-  public open(queryType: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE'): Promise<void> {
+  public open(queryType: QueryType): Promise<void> {
     return this.native.open(queryType);
   }
 
@@ -270,12 +328,12 @@ export class TileDBArray {
     }
   }
 
-  public queryType(): string { return this.native.queryType(); }
+  public queryType(): QueryType { return this.native.queryType() as QueryType; }
   public uri(): string { return this.native.uri(); }
-  public isOpen(): boolean { return this.native.isOpen(); }
+  public isOpen(): boolean { return this.nativeArray ? this.nativeArray.isOpen() : false; }
   public schema(): any { return this.native.schema(); }
 
-  public putMetadata(key: string, datatype: string, value: any): void {
+  public putMetadata(key: string, datatype: Datatype, value: any): void {
     this.native.putMetadata(key, datatype, value);
   }
 
@@ -296,6 +354,10 @@ export class TileDBArray {
   }
 }
 
+/**
+ * Represents a TileDB Subarray.
+ * Used to specify the subset of an array to read from or write to.
+ */
 export class Subarray {
   private nativeSubarray: NativeSubarray | null;
 
@@ -320,10 +382,14 @@ export class Subarray {
   }
 }
 
+/**
+ * Represents a TileDB Query.
+ * Used to submit read and write operations to a TileDB array.
+ */
 export class Query {
   private nativeQuery: NativeQuery | null;
 
-  constructor(ctx: Context, array: TileDBArray, queryType: 'READ' | 'WRITE' | 'DELETE' | 'UPDATE' | 'MODIFY_EXCLUSIVE') {
+  constructor(ctx: Context, array: TileDBArray, queryType: QueryType) {
     this.nativeQuery = new nativeData!.Query(ctx.native, array.native, queryType);
   }
 
@@ -332,7 +398,7 @@ export class Query {
     return this.nativeQuery;
   }
 
-  public setLayout(layout: 'ROW_MAJOR' | 'COL_MAJOR' | 'GLOBAL_ORDER' | 'UNORDERED'): void {
+  public setLayout(layout: Layout): void {
     this.native.setLayout(layout);
   }
 
@@ -375,7 +441,7 @@ export class Query {
     this.native.setValidityBuffer(attribute, buffer);
   }
 
-  public addUpdateValue(attribute: string, value: any, datatype: string): void {
+  public addUpdateValue(attribute: string, value: any, datatype: Datatype): void {
     this.native.addUpdateValue(attribute, value, datatype);
   }
 
@@ -387,12 +453,20 @@ export class Query {
     return this.native.submitAsync();
   }
 
-  public queryStatus(): string {
-    return this.native.queryStatus();
+  public queryStatus(): QueryStatus {
+    return this.native.queryStatus() as QueryStatus;
   }
   
   public resultBufferElements(): Record<string, { first: number, second: number }> {
     return this.native.resultBufferElements();
+  }
+
+  public applyAggregate(outputName: string, operationName: string, inputName?: string): void {
+    this.native.applyAggregate(outputName, operationName, inputName);
+  }
+
+  public getStats(): string {
+    return this.native.stats();
   }
 
   public close(): void {
@@ -403,10 +477,14 @@ export class Query {
   }
 }
 
+/**
+ * Represents a TileDB Query Condition.
+ * Used to filter data during read operations.
+ */
 export class QueryCondition {
   private nativeQC: NativeQueryCondition | null;
 
-  public static create(ctx: Context, attribute: string, value: ArrayBufferView, op: 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ'): QueryCondition {
+  public static create(ctx: Context, attribute: string, value: ArrayBufferView, op: QueryConditionOp): QueryCondition {
     const qc = new QueryCondition(ctx);
     qc.init(attribute, value, op);
     return qc;
@@ -421,11 +499,11 @@ export class QueryCondition {
     return this.nativeQC;
   }
 
-  public init(attribute: string, value: ArrayBufferView, op: 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ'): void {
+  public init(attribute: string, value: ArrayBufferView, op: QueryConditionOp): void {
     this.native.init(attribute, value, op);
   }
 
-  public combine(qc: QueryCondition, op: 'AND' | 'OR' | 'NOT'): QueryCondition {
+  public combine(qc: QueryCondition, op: QueryConditionCombinationOp): QueryCondition {
     const combinedNative = this.native.combine(qc.native, op);
     // Wrap the returned native object
     const newQc = Object.create(QueryCondition.prototype);
@@ -441,6 +519,9 @@ export class QueryCondition {
   }
 }
 
+/**
+ * Provides utility methods for managing TileDB objects (arrays, groups) in the VFS.
+ */
 export class TileDBObject {
   public static type(ctx: Context, uri: string): string {
     return nativeData!.TileDBObject.type(ctx.native, uri);
@@ -464,7 +545,7 @@ export class TileDBObject {
     return results;
   }
 
-  public static walk(ctx: Context, uri: string, order: 'PREORDER' | 'POSTORDER', callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
+  public static walk(ctx: Context, uri: string, order: ObjectOrder, callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
     const results = nativeData!.TileDBObject.walk(ctx.native, uri, order);
     if (callback) {
       for (const res of results) {
@@ -475,6 +556,10 @@ export class TileDBObject {
   }
 }
 
+/**
+ * Represents a TileDB Group.
+ * Groups are collections of TileDB arrays and other groups.
+ */
 export class TileDBGroup {
   private nativeGroup: NativeGroup | null;
 
@@ -490,7 +575,7 @@ export class TileDBGroup {
     nativeData!.Group.vacuum(ctx.native, uri, config?.native);
   }
 
-  constructor(ctx: Context, uri: string, queryType?: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE') {
+  constructor(ctx: Context, uri: string, queryType?: QueryType) {
     this.nativeGroup = new nativeData!.Group(ctx.native, uri, queryType);
   }
 
@@ -499,7 +584,7 @@ export class TileDBGroup {
     return this.nativeGroup;
   }
 
-  public open(queryType: 'READ' | 'WRITE' | 'DELETE' | 'MODIFY_EXCLUSIVE'): void {
+  public open(queryType: QueryType): void {
     this.native.open(queryType);
   }
 
@@ -510,9 +595,9 @@ export class TileDBGroup {
     }
   }
 
-  public isOpen(): boolean { return this.native.isOpen(); }
+  public isOpen(): boolean { return this.nativeGroup ? this.nativeGroup.isOpen() : false; }
   public uri(): string { return this.native.uri(); }
-  public queryType(): string { return this.native.queryType(); }
+  public queryType(): QueryType { return this.native.queryType() as QueryType; }
 
   public addMember(uri: string, relative?: boolean, name?: string): void {
     this.native.addMember(uri, relative, name);
@@ -530,7 +615,7 @@ export class TileDBGroup {
     return this.native.getMemberByIndex(index);
   }
 
-  public putMetadata(key: string, datatype: string, value: any): void {
+  public putMetadata(key: string, datatype: Datatype, value: any): void {
     this.native.putMetadata(key, datatype, value);
   }
 
@@ -551,6 +636,14 @@ export class TileDBGroup {
   }
 }
 
+/**
+ * Represents a TileDB Filter List.
+ * A pipeline of filters applied to array data during reads/writes.
+ */
+/**
+ * Represents a TileDB Filter.
+ * e.g., Compression, encryption, etc.
+ */
 export class FilterList {
   private nativeFilterList: NativeFilterList | null;
 
@@ -584,7 +677,7 @@ export class FilterList {
 export class Filter {
   private nativeFilter: NativeFilter | null;
 
-  constructor(ctx: Context, filterType: string) {
+  constructor(ctx: Context, filterType: FilterType) {
     this.nativeFilter = new nativeData!.Filter(ctx.native, filterType);
   }
 
@@ -593,7 +686,7 @@ export class Filter {
     return this.nativeFilter;
   }
 
-  public type(): string { return this.native.type(); }
+  public type(): Datatype | FilterType | ArrayType | string { return this.native.type(); }
 
   public setOption(option: string, value: number): Filter {
     this.native.setOption(option, value);
@@ -608,6 +701,10 @@ export class Filter {
   }
 }
 
+/**
+ * Represents a TileDB Virtual File System (VFS).
+ * Provides file system abstraction over local, S3, HDFS, etc.
+ */
 export class VFS {
   private nativeVFS: NativeVFS | null;
 
@@ -644,7 +741,7 @@ export class VFS {
   
   public touch(uri: string): void { this.native.touch(uri); }
 
-  public open(uri: string, mode: 'read' | 'write' | 'append' | 'READ' | 'WRITE' | 'APPEND'): void {
+  public open(uri: string, mode: VFSMode): void {
     this.native.open(uri, mode);
   }
 
@@ -656,6 +753,12 @@ export class VFS {
     this.native.write(buffer);
   }
 
+  /** Close the currently-open file handle (not the VFS instance). */
+  public closeFile(): void {
+    this.native.close();
+  }
+
+  /** Destroy the VFS instance and release all resources. */
   public close(): void {
     if (this.nativeVFS) {
       this.nativeVFS.close();
@@ -664,9 +767,104 @@ export class VFS {
   }
 }
 
-export { TileDBVersion };
+/**
+ * Represents TileDB Fragment Information.
+ * Provides metadata about the fragments in a TileDB array.
+ */
+export class FragmentInfo {
+  private nativeFI: NativeFragmentInfo;
 
-const exportedClasses = [Context, Config, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Subarray, Query, QueryCondition, TileDBObject, TileDBGroup, VFS];
+  constructor(ctx: Context, uri: string) {
+    this.nativeFI = new nativeData!.FragmentInfo(ctx.native, uri);
+  }
+
+  public get native(): NativeFragmentInfo { return this.nativeFI; }
+
+  public load(): void { this.native.load(); }
+  public fragmentNum(): number { return this.native.fragmentNum(); }
+  public fragmentUri(fid: number): string { return this.native.fragmentUri(fid); }
+  public fragmentSize(fid: number): bigint | number { return this.native.fragmentSize(fid); }
+  public timestampRange(fid: number): [number, number] { return this.native.timestampRange(fid); }
+  public mbrNum(fid: number): number { return this.native.mbrNum(fid); }
+}
+
+/**
+ * Represents a TileDB Enumeration.
+ * Used for dictionary-encoded string attributes.
+ */
+export class Enumeration {
+  private nativeEnumeration: NativeEnumeration;
+
+  public static create(ctx: Context, name: string, datatype: Datatype, values: any[]): Enumeration {
+    return new Enumeration(nativeData!.Enumeration.create(ctx.native, name, datatype, values));
+  }
+
+  private constructor(nativeEnmr: NativeEnumeration) {
+    this.nativeEnumeration = nativeEnmr;
+  }
+
+  public get native(): NativeEnumeration {
+    return this.nativeEnumeration;
+  }
+
+  public name(): string { return this.native.name(); }
+  public type(): number { return this.native.type(); }
+}
+
+/**
+ * Represents a TileDB Array Schema Evolution.
+ * Used to evolve the schema of an existing TileDB array.
+ */
+export class ArraySchemaEvolution {
+  private nativeEvolution: NativeArraySchemaEvolution;
+
+  constructor(ctx: Context) {
+    this.nativeEvolution = new nativeData!.ArraySchemaEvolution(ctx.native);
+  }
+
+  public get native(): NativeArraySchemaEvolution {
+    return this.nativeEvolution;
+  }
+
+  public addAttribute(attr: Attribute): void { this.native.addAttribute(attr.native); }
+  public dropAttribute(name: string): void { this.native.dropAttribute(name); }
+  public addEnumeration(enmr: Enumeration): void { this.native.addEnumeration(enmr.native); }
+  public dropEnumeration(name: string): void { this.native.dropEnumeration(name); }
+  public extendEnumeration(enmr: Enumeration): void { this.native.extendEnumeration(enmr.native); }
+  public arrayEvolve(uri: string): void { this.native.arrayEvolve(uri); }
+}
+
+/**
+ * Represents a TileDB Consolidation Plan.
+ * Provides a plan for consolidating fragments in an array.
+ */
+export class ConsolidationPlan {
+  private nativePlan: NativeConsolidationPlan;
+
+  constructor(ctx: Context, array: TileDBArray, fragmentSize: number) {
+    this.nativePlan = new nativeData!.ConsolidationPlan(ctx.native, array.native, fragmentSize);
+  }
+
+  public get native(): NativeConsolidationPlan {
+    return this.nativePlan;
+  }
+
+  public numNodes(): number { return this.native.numNodes(); }
+  public numFragments(nodeIdx: number): number { return this.native.numFragments(nodeIdx); }
+  public fragmentUri(nodeIdx: number, fragIdx: number): string { return this.native.fragmentUri(nodeIdx, fragIdx); }
+  public dump(): string { return this.native.dump(); }
+}
+
+export const Stats = {
+  enable: () => { nativeData!.Stats.enable(); },
+  disable: () => { nativeData!.Stats.disable(); },
+  reset: () => { nativeData!.Stats.reset(); },
+  dumpStr: () => { return nativeData!.Stats.dumpStr(); }
+};
+
+export type { TileDBVersion };
+
+const exportedClasses = [Context, Config, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Subarray, Query, QueryCondition, TileDBObject, TileDBGroup, VFS, FragmentInfo, Enumeration, ArraySchemaEvolution, ConsolidationPlan];
 
 exportedClasses.forEach(ctor => {
   const proto = ctor.prototype;

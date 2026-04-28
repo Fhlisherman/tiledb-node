@@ -2,6 +2,9 @@
 #include "context_wrapper.h"
 #include "domain_wrapper.h"
 #include "attribute_wrapper.h"
+#include "enumeration_wrapper.h"
+#include "enum_helpers.h"
+#include <tiledb/array_schema_experimental.h>
 #include <sstream>
 
 Napi::FunctionReference ArraySchemaWrapper::constructor;
@@ -20,14 +23,8 @@ static std::string array_type_to_string(tiledb_array_type_t type) {
     }
 }
 
-static tiledb_layout_t parse_layout(const std::string& layout_str) {
-    if (layout_str == "ROW_MAJOR") return TILEDB_ROW_MAJOR;
-    if (layout_str == "COL_MAJOR") return TILEDB_COL_MAJOR;
-    if (layout_str == "GLOBAL_ORDER") return TILEDB_GLOBAL_ORDER;
-    if (layout_str == "UNORDERED") return TILEDB_UNORDERED;
-    if (layout_str == "HILBERT") return TILEDB_HILBERT;
-    throw std::invalid_argument("Unknown layout: " + layout_str);
-}
+
+
 
 Napi::Object ArraySchemaWrapper::Init(Napi::Env env, Napi::Object exports) {
     Napi::Function func = DefineClass(env, "ArraySchema", {
@@ -40,6 +37,8 @@ Napi::Object ArraySchemaWrapper::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("check", &ArraySchemaWrapper::Check),
         InstanceMethod("arrayType", &ArraySchemaWrapper::GetArrayType),
         InstanceMethod("attributeCount", &ArraySchemaWrapper::GetAttributeCount),
+        InstanceMethod("addEnumeration", &ArraySchemaWrapper::AddEnumeration),
+        InstanceMethod("addDimensionLabel", &ArraySchemaWrapper::AddDimensionLabel),
         InstanceMethod("close", &ArraySchemaWrapper::Close)
     });
 
@@ -201,6 +200,44 @@ Napi::Value ArraySchemaWrapper::GetAttributeCount(const Napi::CallbackInfo& info
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
         return env.Undefined();
     }
+}
+
+Napi::Value ArraySchemaWrapper::AddEnumeration(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 2 || !info[0].IsObject() || !info[1].IsObject()) {
+        Napi::TypeError::New(env, "Expected (Context ctx, Enumeration enmr)").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+    
+    try {
+        ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
+        EnumerationWrapper* enmr_wrap = Napi::ObjectWrap<EnumerationWrapper>::Unwrap(info[1].As<Napi::Object>());
+        tiledb::ArraySchemaExperimental::add_enumeration(ctx_wrap->get_context(), *schema_, enmr_wrap->get_enumeration());
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
+}
+
+Napi::Value ArraySchemaWrapper::AddDimensionLabel(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 5 || !info[0].IsObject() || !info[1].IsNumber() || !info[2].IsString() || !info[3].IsString() || !info[4].IsString()) {
+        Napi::TypeError::New(env, "Expected (Context ctx, number dimIdx, string name, string labelOrder, string labelType)").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+    
+    try {
+        ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
+        uint32_t dim_index = info[1].As<Napi::Number>().Uint32Value();
+        std::string name = info[2].As<Napi::String>().Utf8Value();
+        tiledb_data_order_t order = parse_data_order(info[3].As<Napi::String>().Utf8Value());
+        tiledb_datatype_t type = parse_datatype(info[4].As<Napi::String>().Utf8Value());
+        
+        tiledb::ArraySchemaExperimental::add_dimension_label(ctx_wrap->get_context(), *schema_, dim_index, name, order, type);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
 }
 
 Napi::Value ArraySchemaWrapper::Close(const Napi::CallbackInfo& info) {

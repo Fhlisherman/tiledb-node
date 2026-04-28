@@ -95,7 +95,7 @@ describe('Data Filtering (FilterList)', () => {
         lz4.close();
     });
 
-    it('should create an array with filters and perform I/O', () => {
+    it('should create an array with filters and perform I/O', async () => {
         // Set up filters
         const attrFilter = new FilterList(ctx);
         const gzip = new Filter(ctx, 'GZIP');
@@ -122,7 +122,7 @@ describe('Data Filtering (FilterList)', () => {
         expect(schema.check()).toBe(true);
 
         // Create array
-        TileDBArray.create(arrayUri, schema);
+        await TileDBArray.create(arrayUri, schema);
 
         // Write data
         const arrayWrite = new TileDBArray(ctx, arrayUri, 'WRITE');

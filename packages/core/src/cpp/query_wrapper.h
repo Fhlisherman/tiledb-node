@@ -4,11 +4,16 @@
 #include <napi.h>
 #include <tiledb/tiledb>
 #include <unordered_map>
+#include <map>
 #include <string>
+#include <vector>
+#include <memory>
 #include "context_wrapper.h"
 #include "array_wrapper.h"
 #include "subarray_wrapper.h"
 #include "query_condition_wrapper.h"
+#include <tiledb/tiledb_experimental>
+#include <vector>
 
 class QueryWrapper : public Napi::ObjectWrap<QueryWrapper> {
 public:
@@ -30,10 +35,14 @@ private:
     Napi::Value SubmitAsync(const Napi::CallbackInfo& info);
     Napi::Value QueryStatus(const Napi::CallbackInfo& info);
     Napi::Value ResultBufferElements(const Napi::CallbackInfo& info);
+    Napi::Value ApplyAggregate(const Napi::CallbackInfo& info);
+    Napi::Value Stats(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::Query* query_;
     std::unordered_map<std::string, Napi::Reference<Napi::Value>> pinned_buffers_;
+    std::map<std::string, std::unique_ptr<uint64_t>> buff_sizes_;
+    std::vector<tiledb::ChannelOperation> pinned_operations_;
 };
 
 #endif

@@ -63,14 +63,14 @@ describe('VFS', () => {
     vfs.open(testFileURI, 'write');
     const content = Buffer.from('hello tiledb vfs');
     vfs.write(content);
-    vfs.close(); // Need to close file opened in vfs instance
+    vfs.closeFile(); // Close the file handle, not the VFS instance
     
     expect(vfs.fileSize(testFileURI)).toBe(content.length);
 
     // Read from file
     vfs.open(testFileURI, 'read');
     const readBuf = vfs.read(0, content.length);
-    vfs.close();
+    vfs.closeFile();
     
     expect(readBuf.toString()).toBe('hello tiledb vfs');
     
@@ -83,7 +83,7 @@ describe('VFS', () => {
     vfs.touch(testFileURI);
     vfs.open(testFileURI, 'write');
     vfs.write(Buffer.from('copy-move-test'));
-    vfs.close();
+    vfs.closeFile();
 
     // Copy
     vfs.copyFile(testFileURI, copyFileURI);
@@ -117,7 +117,8 @@ describe('VFS', () => {
         // should never reach here
         expect(false).toBe(true);
     } catch (e: any) {
-        expect(e).toBeInstanceOf(TileDBError);
+        expect(e).toBeInstanceOf(Error);
+        expect(e.message).toContain('Failed to open file via VFS');
     }
   });
 });

@@ -40,4 +40,5 @@ private:
 
     tiledb::Array* array_;
     tiledb::Context* ctx_ref_;
+    std::string uri_;
 };

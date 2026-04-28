@@ -14,6 +14,11 @@
 #include "object_wrapper.h"
 #include "group_wrapper.h"
 #include "vfs_wrapper.h"
+#include "stats_wrapper.h"
+#include "fragment_info_wrapper.h"
+#include "enumeration_wrapper.h"
+#include "array_schema_evolution_wrapper.h"
+#include "consolidation_plan_wrapper.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     ContextWrapper::Init(env, exports);
@@ -31,6 +36,11 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     ObjectWrapper::Init(env, exports);
     GroupWrapper::Init(env, exports);
     VFSWrapper::Init(env, exports);
+    StatsWrapper::Init(env, exports);
+    FragmentInfoWrapper::Init(env, exports);
+    EnumerationWrapper::Init(env, exports);
+    ArraySchemaEvolutionWrapper::Init(env, exports);
+    ConsolidationPlanWrapper::Init(env, exports);
     return exports;
 }
 

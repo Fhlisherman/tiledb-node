@@ -10,7 +10,7 @@ describe('TileDBObject API', () => {
   const newUri = path.join(baseUri, 'arr1_moved');
   const ctx = new Context();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     if (fs.existsSync(baseUri)) {
       fs.rmSync(baseUri, { recursive: true, force: true });
     }
@@ -22,7 +22,7 @@ describe('TileDBObject API', () => {
     domain1.addDimension(new Dimension(ctx, 'd1', 'INT32', 1, 10, 2));
     schema1.setDomain(domain1);
     schema1.addAttribute(new Attribute(ctx, 'a1', 'INT32'));
-    TileDBArray.create(arrUri1, schema1);
+    await TileDBArray.create(arrUri1, schema1);
 
     // Create second array
     const schema2 = new ArraySchema(ctx, 'DENSE');
@@ -30,7 +30,7 @@ describe('TileDBObject API', () => {
     domain2.addDimension(new Dimension(ctx, 'd1', 'INT32', 1, 10, 2));
     schema2.setDomain(domain2);
     schema2.addAttribute(new Attribute(ctx, 'a1', 'INT32'));
-    TileDBArray.create(arrUri2, schema2);
+    await TileDBArray.create(arrUri2, schema2);
   });
 
   afterEach(() => {

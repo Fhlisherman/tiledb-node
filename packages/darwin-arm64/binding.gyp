@@ -16,7 +16,13 @@
       "src/cpp/query_condition_wrapper.cpp",
       "src/cpp/query_wrapper.cpp",
       "src/cpp/object_wrapper.cpp",
-      "src/cpp/group_wrapper.cpp"
+      "src/cpp/group_wrapper.cpp",
+      "src/cpp/vfs_wrapper.cpp",
+      "src/cpp/stats_wrapper.cpp",
+      "src/cpp/fragment_info_wrapper.cpp",
+      "src/cpp/enumeration_wrapper.cpp",
+      "src/cpp/array_schema_evolution_wrapper.cpp",
+      "src/cpp/consolidation_plan_wrapper.cpp"
     ],
     "include_dirs": [
       "<!@(node -p \"require('node-addon-api').include\")",

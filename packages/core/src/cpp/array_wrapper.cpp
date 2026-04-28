@@ -3,6 +3,7 @@
 #include "config_wrapper.h"
 #include "array_schema_wrapper.h"
 #include "enum_helpers.h"
+#include "metadata_helpers.h"
 #include <optional>
 #include <iostream>
 
@@ -91,9 +92,9 @@ Napi::Value ArrayWrapper::Create(const Napi::CallbackInfo& info) {
 
 class ArrayConsolidateAsyncWorker : public Napi::AsyncWorker {
 public:
-    ArrayConsolidateAsyncWorker(Napi::Env& env, tiledb::Context& ctx, std::string uri,
+    ArrayConsolidateAsyncWorker(Napi::Env& env, tiledb::Context ctx, std::string uri,
                                 std::optional<tiledb::Config> config)
-        : Napi::AsyncWorker(env), ctx_(ctx), uri_(std::move(uri)), config_(std::move(config)),
+        : Napi::AsyncWorker(env), ctx_(std::move(ctx)), uri_(std::move(uri)), config_(std::move(config)),
           deferred_(Napi::Promise::Deferred::New(env)) {}
 
     void Execute() override {
@@ -121,7 +122,7 @@ public:
     Napi::Promise GetPromise() { return deferred_.Promise(); }
 
 private:
-    tiledb::Context& ctx_;
+    tiledb::Context ctx_;
     std::string uri_;
     std::optional<tiledb::Config> config_;
     Napi::Promise::Deferred deferred_;
@@ -154,9 +155,9 @@ Napi::Value ArrayWrapper::Consolidate(const Napi::CallbackInfo& info) {
 
 class ArrayVacuumAsyncWorker : public Napi::AsyncWorker {
 public:
-    ArrayVacuumAsyncWorker(Napi::Env& env, tiledb::Context& ctx, std::string uri,
+    ArrayVacuumAsyncWorker(Napi::Env& env, tiledb::Context ctx, std::string uri,
                            std::optional<tiledb::Config> config)
-        : Napi::AsyncWorker(env), ctx_(ctx), uri_(std::move(uri)), config_(std::move(config)),
+        : Napi::AsyncWorker(env), ctx_(std::move(ctx)), uri_(std::move(uri)), config_(std::move(config)),
           deferred_(Napi::Promise::Deferred::New(env)) {}
 
     void Execute() override {
@@ -184,7 +185,7 @@ public:
     Napi::Promise GetPromise() { return deferred_.Promise(); }
 
 private:
-    tiledb::Context& ctx_;
+    tiledb::Context ctx_;
     std::string uri_;
     std::optional<tiledb::Config> config_;
     Napi::Promise::Deferred deferred_;
@@ -257,9 +258,16 @@ Napi::Value ArrayWrapper::Open(const Napi::CallbackInfo& info) {
     try {
         std::string type_str = info[0].As<Napi::String>().Utf8Value();
         tiledb_query_type_t query_type = parse_query_type(type_str);
-        auto* worker = new ArrayOpenAsyncWorker(env, this->array_, query_type);
-        worker->Queue();
-        return worker->GetPromise();
+        if (this->array_ == nullptr) {
+            this->array_ = new tiledb::Array(*this->ctx_ref_, this->uri_, query_type);
+            auto d = Napi::Promise::Deferred::New(env);
+            d.Resolve(env.Undefined());
+            return d.Promise();
+        } else {
+            auto* worker = new ArrayOpenAsyncWorker(env, this->array_, query_type);
+            worker->Queue();
+            return worker->GetPromise();
+        }
     } catch (const std::exception& e) {
         auto d = Napi::Promise::Deferred::New(env);
         d.Reject(Napi::Error::New(env, e.what()).Value());
@@ -283,6 +291,7 @@ ArrayWrapper::ArrayWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Ar
     try {
         ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
         std::string uri = info[1].As<Napi::String>().Utf8Value();
+        this->uri_ = uri;
         this->ctx_ref_ = &ctx_wrap->get_context();
 
         if (info.Length() >= 3 && info[2].IsString()) {
@@ -290,8 +299,8 @@ ArrayWrapper::ArrayWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<Ar
             tiledb_query_type_t query_type = parse_query_type(type_str);
             this->array_ = new tiledb::Array(*this->ctx_ref_, uri, query_type);
         } else {
-            // Open for reading by default
-            this->array_ = new tiledb::Array(*this->ctx_ref_, uri, TILEDB_READ);
+            // Delay instantiation until Open is called
+            this->array_ = nullptr;
         }
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -314,22 +323,6 @@ ArrayWrapper::~ArrayWrapper() {
     }
 }
 
-Napi::Value ArrayWrapper::Open(const Napi::CallbackInfo& info) {
-    Napi::Env env = info.Env();
-    if (info.Length() < 1 || !info[0].IsString()) {
-        Napi::TypeError::New(env, "Expected (string queryType)").ThrowAsJavaScriptException();
-        return env.Undefined();
-    }
-    try {
-        std::string type_str = info[0].As<Napi::String>().Utf8Value();
-        tiledb_query_type_t query_type = parse_query_type(type_str);
-        this->array_->open(query_type);
-    } catch (const std::exception& e) {
-        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
-    }
-    return env.Undefined();
-}
-
 Napi::Value ArrayWrapper::Close(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     try {
@@ -345,6 +338,9 @@ Napi::Value ArrayWrapper::Close(const Napi::CallbackInfo& info) {
 Napi::Value ArrayWrapper::GetQueryType(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     try {
+        if (this->array_ == nullptr) {
+            return Napi::String::New(env, "CLOSED");
+        }
         return Napi::String::New(env, query_type_to_string(this->array_->query_type()));
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -355,7 +351,10 @@ Napi::Value ArrayWrapper::GetQueryType(const Napi::CallbackInfo& info) {
 Napi::Value ArrayWrapper::GetUri(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     try {
-        return Napi::String::New(env, this->array_->uri());
+        if (this->array_ != nullptr) {
+            return Napi::String::New(env, this->array_->uri());
+        }
+        return Napi::String::New(env, this->uri_);
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
         return env.Undefined();
@@ -365,6 +364,9 @@ Napi::Value ArrayWrapper::GetUri(const Napi::CallbackInfo& info) {
 Napi::Value ArrayWrapper::IsOpen(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     try {
+        if (this->array_ == nullptr) {
+            return Napi::Boolean::New(env, false);
+        }
         return Napi::Boolean::New(env, this->array_->is_open());
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -436,12 +438,20 @@ Napi::Value ArrayWrapper::PutMetadata(const Napi::CallbackInfo& info) {
             case TILEDB_INT64: {
                 bool lossless;
                 int64_t v = val.As<Napi::BigInt>().Int64Value(&lossless);
+                if (!lossless) {
+                    Napi::RangeError::New(env, "BigInt value exceeds int64 range").ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
                 this->array_->put_metadata(key, type, 1, &v);
                 break;
             }
             case TILEDB_UINT64: {
                 bool lossless;
                 uint64_t v = val.As<Napi::BigInt>().Uint64Value(&lossless);
+                if (!lossless) {
+                    Napi::RangeError::New(env, "BigInt value exceeds uint64 range").ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
                 this->array_->put_metadata(key, type, 1, &v);
                 break;
             }
@@ -486,30 +496,7 @@ Napi::Value ArrayWrapper::PutMetadata(const Napi::CallbackInfo& info) {
     return env.Undefined();
 }
 
-static Napi::Value convert_metadata_to_napi(Napi::Env env, tiledb_datatype_t type, uint32_t value_num, const void* value) {
-    if (value == nullptr) return env.Null();
 
-    if (type == TILEDB_STRING_UTF8 || type == TILEDB_STRING_ASCII || type == TILEDB_CHAR) {
-        return Napi::String::New(env, static_cast<const char*>(value), value_num);
-    }
-
-    if (value_num == 1) {
-        switch (type) {
-            case TILEDB_INT32: return Napi::Number::New(env, *static_cast<const int32_t*>(value));
-            case TILEDB_FLOAT64: return Napi::Number::New(env, *static_cast<const double*>(value));
-            case TILEDB_FLOAT32: return Napi::Number::New(env, *static_cast<const float*>(value));
-            case TILEDB_INT64: return Napi::BigInt::New(env, *static_cast<const int64_t*>(value));
-            case TILEDB_UINT64: return Napi::BigInt::New(env, *static_cast<const uint64_t*>(value));
-            case TILEDB_INT8: return Napi::Number::New(env, *static_cast<const int8_t*>(value));
-            case TILEDB_UINT8: return Napi::Number::New(env, *static_cast<const uint8_t*>(value));
-            case TILEDB_INT16: return Napi::Number::New(env, *static_cast<const int16_t*>(value));
-            case TILEDB_UINT16: return Napi::Number::New(env, *static_cast<const uint16_t*>(value));
-            case TILEDB_UINT32: return Napi::Number::New(env, *static_cast<const uint32_t*>(value));
-            default: return env.Undefined();
-        }
-    }
-    return env.Undefined();
-}
 
 Napi::Value ArrayWrapper::GetMetadata(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();

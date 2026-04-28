@@ -17,6 +17,8 @@ Napi::Object QueryWrapper::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("submitAsync", &QueryWrapper::SubmitAsync),
         InstanceMethod("queryStatus", &QueryWrapper::QueryStatus),
         InstanceMethod("resultBufferElements", &QueryWrapper::ResultBufferElements),
+        InstanceMethod("applyAggregate", &QueryWrapper::ApplyAggregate),
+        InstanceMethod("stats", &QueryWrapper::Stats),
         InstanceMethod("close", &QueryWrapper::Close)
     });
 
@@ -56,6 +58,8 @@ QueryWrapper::~QueryWrapper() {
         kv.second.Reset();
     }
     pinned_buffers_.clear();
+    pinned_operations_.clear();
+    buff_sizes_.clear();
 }
 
 Napi::Value QueryWrapper::SetLayout(const Napi::CallbackInfo& info) {
@@ -127,8 +131,27 @@ Napi::Value QueryWrapper::SetDataBuffer(const Napi::CallbackInfo& info) {
         void* final_ptr = static_cast<char*>(buffer_data) + byte_offset;
         
         uint64_t num_elements = typed_array.ElementLength();
-
-        this->query_->set_data_buffer(attr, final_ptr, num_elements);
+        
+        try {
+            this->query_->set_data_buffer(attr, final_ptr, num_elements);
+        } catch (const std::exception& e) {
+            // Fallback for aggregates
+            uint64_t element_size_bytes = typed_array.ElementSize();
+            this->buff_sizes_[attr] = std::make_unique<uint64_t>(num_elements * element_size_bytes);
+            
+            auto& ctx = this->query_->ctx();
+            int rc = tiledb_query_set_data_buffer(
+                ctx.ptr().get(),
+                this->query_->ptr().get(),
+                attr.c_str(),
+                final_ptr,
+                this->buff_sizes_[attr].get()
+            );
+            if (rc != TILEDB_OK) {
+                Napi::Error::New(env, "Failed to set data buffer").ThrowAsJavaScriptException();
+                return env.Undefined();
+            }
+        }
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
     }
@@ -228,12 +251,20 @@ Napi::Value QueryWrapper::AddUpdateValue(const Napi::CallbackInfo& info) {
             case TILEDB_INT64: {
                 bool lossless;
                 int64_t v = val.As<Napi::BigInt>().Int64Value(&lossless);
+                if (!lossless) {
+                    Napi::RangeError::New(env, "BigInt value exceeds int64 range").ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(int64_t));
                 break;
             }
             case TILEDB_UINT64: {
                 bool lossless;
                 uint64_t v = val.As<Napi::BigInt>().Uint64Value(&lossless);
+                if (!lossless) {
+                    Napi::RangeError::New(env, "BigInt value exceeds uint64 range").ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(uint64_t));
                 break;
             }
@@ -295,6 +326,7 @@ Napi::Value QueryWrapper::Submit(const Napi::CallbackInfo& info) {
         }
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Undefined();
     }
     return Napi::String::New(env, "COMPLETE");
 }
@@ -308,9 +340,7 @@ public:
 
     void Execute() override {
         try {
-            if (query_->submit() != tiledb::Query::Status::COMPLETE) {
-                SetError("Query did not complete normally or was INCOMPLETE.");
-            }
+            status_ = query_->submit();
         } catch (const std::exception& e) {
             SetError(e.what());
         }
@@ -318,7 +348,17 @@ public:
 
     void OnOK() override {
         Napi::HandleScope scope(Env());
-        deferred_.Resolve(Napi::String::New(Env(), "COMPLETE"));
+        std::string status_str;
+        switch (status_) {
+            case tiledb::Query::Status::FAILED: status_str = "FAILED"; break;
+            case tiledb::Query::Status::COMPLETE: status_str = "COMPLETE"; break;
+            case tiledb::Query::Status::INPROGRESS: status_str = "INPROGRESS"; break;
+            case tiledb::Query::Status::INCOMPLETE: status_str = "INCOMPLETE"; break;
+            case tiledb::Query::Status::UNINITIALIZED: status_str = "UNINITIALIZED"; break;
+            case tiledb::Query::Status::INITIALIZED: status_str = "INITIALIZED"; break;
+            default: status_str = "UNKNOWN"; break;
+        }
+        deferred_.Resolve(Napi::String::New(Env(), status_str));
     }
 
     void OnError(const Napi::Error& e) override {
@@ -332,6 +372,7 @@ public:
 
 private:
     tiledb::Query* query_;
+    tiledb::Query::Status status_;
     Napi::Promise::Deferred deferred_;
 };
 
@@ -379,6 +420,70 @@ Napi::Value QueryWrapper::ResultBufferElements(const Napi::CallbackInfo& info) {
     return env.Undefined();
 }
 
+Napi::Value QueryWrapper::ApplyAggregate(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 2 || !info[0].IsString() || !info[1].IsString()) {
+        Napi::TypeError::New(env, "Expected (string outputName, string operationName, [string inputName])").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+    
+    try {
+        std::string output_name = info[0].As<Napi::String>().Utf8Value();
+        std::string op_name = info[1].As<Napi::String>().Utf8Value();
+        
+        tiledb::QueryChannel channel = tiledb::QueryExperimental::get_default_channel(*query_);
+        if (op_name == "COUNT") {
+            auto op = tiledb::CountOperation();
+            this->pinned_operations_.push_back(op);
+            channel.apply_aggregate(output_name, op);
+        } else {
+            if (info.Length() < 3 || !info[2].IsString()) {
+                Napi::TypeError::New(env, "Expected inputName for non-count operations").ThrowAsJavaScriptException();
+                return env.Undefined();
+            }
+            std::string input_name = info[2].As<Napi::String>().Utf8Value();
+            
+            if (op_name == "SUM") {
+                auto op = tiledb::QueryExperimental::create_unary_aggregate<tiledb::SumOperator>(*query_, input_name);
+                this->pinned_operations_.push_back(op);
+                channel.apply_aggregate(output_name, op);
+            } else if (op_name == "MIN") {
+                auto op = tiledb::QueryExperimental::create_unary_aggregate<tiledb::MinOperator>(*query_, input_name);
+                this->pinned_operations_.push_back(op);
+                channel.apply_aggregate(output_name, op);
+            } else if (op_name == "MAX") {
+                auto op = tiledb::QueryExperimental::create_unary_aggregate<tiledb::MaxOperator>(*query_, input_name);
+                this->pinned_operations_.push_back(op);
+                channel.apply_aggregate(output_name, op);
+            } else if (op_name == "MEAN") {
+                auto op = tiledb::QueryExperimental::create_unary_aggregate<tiledb::MeanOperator>(*query_, input_name);
+                this->pinned_operations_.push_back(op);
+                channel.apply_aggregate(output_name, op);
+            } else if (op_name == "NULL_COUNT") {
+                auto op = tiledb::QueryExperimental::create_unary_aggregate<tiledb::NullCountOperator>(*query_, input_name);
+                this->pinned_operations_.push_back(op);
+                channel.apply_aggregate(output_name, op);
+            } else {
+                Napi::TypeError::New(env, ("Unknown operation: " + op_name).c_str()).ThrowAsJavaScriptException();
+            }
+        }
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
+}
+
+Napi::Value QueryWrapper::Stats(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    try {
+        std::string stats_str = query_->stats();
+        return Napi::String::New(env, stats_str);
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+        return env.Null();
+    }
+}
+
 Napi::Value QueryWrapper::Close(const Napi::CallbackInfo& info) {
     if (this->query_ != nullptr) {
         delete this->query_;
@@ -388,5 +493,7 @@ Napi::Value QueryWrapper::Close(const Napi::CallbackInfo& info) {
         kv.second.Reset();
     }
     pinned_buffers_.clear();
+    pinned_operations_.clear();
+    buff_sizes_.clear();
     return info.Env().Undefined();
 }

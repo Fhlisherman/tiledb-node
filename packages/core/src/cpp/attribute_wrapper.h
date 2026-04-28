@@ -26,6 +26,7 @@ private:
     Napi::Value SetNullable(const Napi::CallbackInfo& info);
     Napi::Value GetNullable(const Napi::CallbackInfo& info);
     Napi::Value SetFilterList(const Napi::CallbackInfo& info);
+    Napi::Value SetEnumerationName(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::Attribute* attr_;

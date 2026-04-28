@@ -81,6 +81,7 @@ inline tiledb_layout_t parse_layout(const std::string& layout_str) {
     if (layout_str == "COL_MAJOR") return TILEDB_COL_MAJOR;
     if (layout_str == "GLOBAL_ORDER") return TILEDB_GLOBAL_ORDER;
     if (layout_str == "UNORDERED") return TILEDB_UNORDERED;
+    if (layout_str == "HILBERT") return TILEDB_HILBERT;
     throw std::invalid_argument("Unknown layout: " + layout_str);
 }
 
@@ -119,4 +120,11 @@ inline tiledb_query_condition_combination_op_t parse_query_condition_combination
     if (op_str == "OR") return TILEDB_OR;
     if (op_str == "NOT") return TILEDB_NOT;
     throw std::invalid_argument("Unknown query condition combination op: " + op_str);
+}
+
+inline tiledb_data_order_t parse_data_order(const std::string& order_str) {
+    if (order_str == "UNORDERED" || order_str == "UNORDERED_DATA") return TILEDB_UNORDERED_DATA;
+    if (order_str == "INCREASING" || order_str == "INCREASING_DATA") return TILEDB_INCREASING_DATA;
+    if (order_str == "DECREASING" || order_str == "DECREASING_DATA") return TILEDB_DECREASING_DATA;
+    throw std::invalid_argument("Unknown data order: " + order_str + ". Use 'INCREASING', 'DECREASING', or 'UNORDERED'.");
 }

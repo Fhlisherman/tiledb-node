@@ -53,9 +53,9 @@ VFSWrapper::VFSWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<VFSWra
                  return;
             }
             auto config_wrapper = Napi::ObjectWrap<ConfigWrapper>::Unwrap(info[1].As<Napi::Object>());
-            vfs_ = std::make_unique<tiledb::VFS>(ctx_wrapper->GetContext(), config_wrapper->GetConfig());
+            vfs_ = std::make_unique<tiledb::VFS>(ctx_wrapper->get_context(), config_wrapper->get_config());
         } else {
-            vfs_ = std::make_unique<tiledb::VFS>(ctx_wrapper->GetContext());
+            vfs_ = std::make_unique<tiledb::VFS>(ctx_wrapper->get_context());
         }
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();

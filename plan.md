@@ -82,11 +82,11 @@ Deep integration with TileDB's core engine for complex data patterns.
 ## 4. Advanced Inspection & Stats
 Helping developers understand their data and performance.
 
-- [ ] **Fragment Info** 🔴:
+- [x] **Fragment Info** 🟢:
     - `FragmentInfo.load(uri)`
     - Get fragment count, URIs, and sizes.
     - Get non-empty overlap and MBRs for each fragment.
-- [ ] **Performance Stats** 🔴:
+- [x] **Performance Stats** 🟢:
     - `Stats.enable()` / `Stats.disable()`
     - `Stats.dump(file)` / `Stats.dumpStr()`
     - `Query.getStats()` support.
@@ -94,19 +94,19 @@ Helping developers understand their data and performance.
 ## 5. Experimental Power Features
 TileDB experimental features which are now standard in most use cases.
 
-- [ ] **Query Aggregates** 🔴:
+- [x] **Query Aggregates** 🟢:
     - `QueryChannel` support.
     - `Aggregates.SUM()`, `Aggregates.COUNT()`, `Aggregates.MEAN()`, etc.
-- [ ] **Schema Evolution** 🔴:
+- [x] **Schema Evolution** 🟢:
     - `ArraySchemaEvolution.addAttribute()`
     - `ArraySchemaEvolution.dropAttribute()`
     - `Array.evolve(schemaEvolution)`
-- [ ] **Enumerations (Dictionaries)** 🔴:
+- [x] **Enumerations (Dictionaries)** 🟢:
     - `Enumeration.create(name, datatype, values)`.
     - Binding enums to Attribute schemas.
-- [ ] **Consolidation Plans** 🔴:
+- [x] **Consolidation Plans** 🟢:
     - `ConsolidationPlan.create(fragmentSize)`.
-- [ ] **Dimension Labels** 🔴:
+- [x] **Dimension Labels** 🟢:
     - `ArraySchema.addDimensionLabel(ctx, name, dimIdx, order, type)`.
     - Querying labeled dimensions.
 
@@ -114,12 +114,12 @@ TileDB experimental features which are now standard in most use cases.
 Making the library robust and easy to use in modern TypeScript projects.
 
 - [x] **Basic Typed Bindings** 🟢: `bindings.d.ts` matches C++ wrappers.
-- [ ] **Strict String Unions** 🟡:
+- [x] **Strict String Unions** 🟢:
     - Replace `string` with literals like `'INT32' | 'FLOAT64'` for `Datatype`.
     - Literacy for `FilterType`, `Layout`, `ArrayType`, and `QueryStatus`.
-- [ ] **BigInt Handling** 🟡:
+- [x] **BigInt Handling** 🟢:
     - Ensure all `uint64_t` or `int64_t` (offsets, ranges, cell counts) correctly use JavaScript `BigInt`.
 - [x] **Custom Error Class** 🟢:
     - Map TileDB C API error codes to a `TileDBError` class with detailed diagnostics.
-- [ ] **Comprehensive JSDoc** 🔴:
+- [x] **Comprehensive JSDoc** 🟢:
     - Add descriptive documentation to all exported classes and methods to improve IDE autocomplete experience.

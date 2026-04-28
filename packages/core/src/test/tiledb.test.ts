@@ -64,7 +64,7 @@ describe('TileDB Core API', () => {
         schema.addAttribute(attr);
 
         // 2. Create Array
-        const created = TileDBArray.create(arrayUri, schema);
+        const created = await TileDBArray.create(arrayUri, schema);
         expect(created).toBe(true);
 
         // 3. Write Data

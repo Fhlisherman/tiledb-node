@@ -10,7 +10,7 @@ describe('TileDBGroup API', () => {
   const arrUri = path.join(baseUri, 'my_group', 'child_array');
   const ctx = new Context();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     if (fs.existsSync(baseUri)) {
       fs.rmSync(baseUri, { recursive: true, force: true });
     }
@@ -25,7 +25,7 @@ describe('TileDBGroup API', () => {
     domain.addDimension(new Dimension(ctx, 'd1', 'INT32', 1, 10, 2));
     schema.setDomain(domain);
     schema.addAttribute(new Attribute(ctx, 'a1', 'INT32'));
-    TileDBArray.create(arrUri, schema);
+    await TileDBArray.create(arrUri, schema);
   });
 
   afterEach(() => {

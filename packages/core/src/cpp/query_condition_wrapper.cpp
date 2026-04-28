@@ -79,8 +79,8 @@ Napi::Value QueryConditionWrapper::Combine(const Napi::CallbackInfo& info) {
 
         tiledb::QueryCondition combined_qc = this->condition_->combine(rhs_wrap->get_condition(), comb_op);
         
-        // Create new wrapped JS object
-        Napi::Object obj = constructor.New({ info[0].As<Napi::Object>() }); // fake context wrap
+        // Create new wrapped JS object using the stored context wrapper
+        Napi::Object obj = constructor.New({ this->ctx_ref_->Value() });
         QueryConditionWrapper* combined_wrap = Napi::ObjectWrap<QueryConditionWrapper>::Unwrap(obj);
         combined_wrap->set_condition(combined_qc);
 
@@ -96,9 +96,8 @@ Napi::Value QueryConditionWrapper::Negate(const Napi::CallbackInfo& info) {
     try {
         tiledb::QueryCondition negated_qc = this->condition_->negate();
         
-        // Instantiate using the fake context wrap pattern 
-        // We'll just pass a null stub because we overwrite condition immediately
-        Napi::Object obj = constructor.New({ Napi::Object::New(env) }); 
+        // Instantiate using the stored context wrapper
+        Napi::Object obj = constructor.New({ this->ctx_ref_->Value() }); 
         QueryConditionWrapper* negated_wrap = Napi::ObjectWrap<QueryConditionWrapper>::Unwrap(obj);
         negated_wrap->set_condition(negated_qc);
 

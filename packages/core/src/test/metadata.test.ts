@@ -7,7 +7,7 @@ describe('TileDBArray Metadata', () => {
   const uri = path.join(__dirname, '__test_metadata_array');
   const ctx = new Context();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     if (fs.existsSync(uri)) {
       fs.rmSync(uri, { recursive: true, force: true });
     }
@@ -21,7 +21,7 @@ describe('TileDBArray Metadata', () => {
     const attr = new Attribute(ctx, 'a1', 'INT32');
     schema.addAttribute(attr);
     
-    TileDBArray.create(uri, schema);
+    await TileDBArray.create(uri, schema);
   });
 
   afterEach(() => {
