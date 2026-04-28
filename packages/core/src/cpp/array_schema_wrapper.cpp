@@ -5,7 +5,6 @@
 #include "enumeration_wrapper.h"
 #include "enum_helpers.h"
 #include <tiledb/array_schema_experimental.h>
-#include <sstream>
 
 Napi::FunctionReference ArraySchemaWrapper::constructor;
 
@@ -22,9 +21,6 @@ static std::string array_type_to_string(tiledb_array_type_t type) {
         default: return "UNKNOWN";
     }
 }
-
-
-
 
 Napi::Object ArraySchemaWrapper::Init(Napi::Env env, Napi::Object exports) {
     Napi::Function func = DefineClass(env, "ArraySchema", {

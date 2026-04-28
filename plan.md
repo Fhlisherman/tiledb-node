@@ -122,4 +122,5 @@ Making the library robust and easy to use in modern TypeScript projects.
 - [x] **Custom Error Class** 🟢:
     - Map TileDB C API error codes to a `TileDBError` class with detailed diagnostics.
 - [x] **Comprehensive JSDoc** 🟢:
-    - Add descriptive documentation to all exported classes and methods to improve IDE autocomplete experience.
+    - Verified and added descriptive documentation to all exported classes and methods (Context, Array, Query, etc.).
+
