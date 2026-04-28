@@ -75,3 +75,56 @@ inline std::string datatype_to_string(tiledb_datatype_t type) {
         default: return "UNKNOWN";
     }
 }
+
+inline tiledb_layout_t parse_layout(const std::string& layout_str) {
+    if (layout_str == "ROW_MAJOR") return TILEDB_ROW_MAJOR;
+    if (layout_str == "COL_MAJOR") return TILEDB_COL_MAJOR;
+    if (layout_str == "GLOBAL_ORDER") return TILEDB_GLOBAL_ORDER;
+    if (layout_str == "UNORDERED") return TILEDB_UNORDERED;
+    if (layout_str == "HILBERT") return TILEDB_HILBERT;
+    throw std::invalid_argument("Unknown layout: " + layout_str);
+}
+
+inline tiledb_query_type_t parse_query_type(const std::string& query_type_str) {
+    if (query_type_str == "READ") return TILEDB_READ;
+    if (query_type_str == "WRITE") return TILEDB_WRITE;
+    if (query_type_str == "DELETE") return TILEDB_DELETE;
+    if (query_type_str == "UPDATE") return TILEDB_UPDATE;
+    if (query_type_str == "MODIFY_EXCLUSIVE") return TILEDB_MODIFY_EXCLUSIVE;
+    throw std::invalid_argument("Unknown query type: " + query_type_str);
+}
+
+inline std::string query_type_to_string(tiledb_query_type_t type) {
+    switch (type) {
+        case TILEDB_READ: return "READ";
+        case TILEDB_WRITE: return "WRITE";
+        case TILEDB_DELETE: return "DELETE";
+        case TILEDB_UPDATE: return "UPDATE";
+        case TILEDB_MODIFY_EXCLUSIVE: return "MODIFY_EXCLUSIVE";
+        default: return "UNKNOWN";
+    }
+}
+
+inline tiledb_query_condition_op_t parse_query_condition_op(const std::string& op_str) {
+    if (op_str == "LT") return TILEDB_LT;
+    if (op_str == "LE") return TILEDB_LE;
+    if (op_str == "GT") return TILEDB_GT;
+    if (op_str == "GE") return TILEDB_GE;
+    if (op_str == "EQ") return TILEDB_EQ;
+    if (op_str == "NEQ") return TILEDB_NE;
+    throw std::invalid_argument("Unknown query condition op: " + op_str);
+}
+
+inline tiledb_query_condition_combination_op_t parse_query_condition_combination_op(const std::string& op_str) {
+    if (op_str == "AND") return TILEDB_AND;
+    if (op_str == "OR") return TILEDB_OR;
+    if (op_str == "NOT") return TILEDB_NOT;
+    throw std::invalid_argument("Unknown query condition combination op: " + op_str);
+}
+
+inline tiledb_data_order_t parse_data_order(const std::string& order_str) {
+    if (order_str == "UNORDERED" || order_str == "UNORDERED_DATA") return TILEDB_UNORDERED_DATA;
+    if (order_str == "INCREASING" || order_str == "INCREASING_DATA") return TILEDB_INCREASING_DATA;
+    if (order_str == "DECREASING" || order_str == "DECREASING_DATA") return TILEDB_DECREASING_DATA;
+    throw std::invalid_argument("Unknown data order: " + order_str + ". Use 'INCREASING', 'DECREASING', or 'UNORDERED'.");
+}

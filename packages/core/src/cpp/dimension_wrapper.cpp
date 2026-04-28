@@ -1,5 +1,6 @@
 #include "dimension_wrapper.h"
 #include "context_wrapper.h"
+#include "filter_list_wrapper.h"
 #include "enum_helpers.h"
 
 Napi::FunctionReference DimensionWrapper::constructor;
@@ -10,6 +11,7 @@ Napi::Object DimensionWrapper::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("type", &DimensionWrapper::GetType),
         InstanceMethod("domain", &DimensionWrapper::GetDomain),
         InstanceMethod("tileExtent", &DimensionWrapper::GetTileExtent),
+        InstanceMethod("setFilterList", &DimensionWrapper::SetFilterList),
         InstanceMethod("close", &DimensionWrapper::Close)
     });
 
@@ -161,6 +163,21 @@ Napi::Value DimensionWrapper::GetTileExtent(const Napi::CallbackInfo& info) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
         return env.Undefined();
     }
+}
+
+Napi::Value DimensionWrapper::SetFilterList(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 1 || !info[0].IsObject()) {
+        Napi::TypeError::New(env, "Expected (FilterList filterList)").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+    try {
+        FilterListWrapper* fl_wrap = Napi::ObjectWrap<FilterListWrapper>::Unwrap(info[0].As<Napi::Object>());
+        this->dim_->set_filter_list(fl_wrap->get_filter_list());
+    } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
 }
 
 Napi::Value DimensionWrapper::Close(const Napi::CallbackInfo& info) {

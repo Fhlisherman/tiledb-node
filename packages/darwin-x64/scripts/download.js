@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const tar = require('tar');
 
+// Platform guard — skip download on wrong platform
+if (process.platform !== 'darwin' || process.arch !== 'x64') {
+  console.log('Skipping download: wrong platform (expected darwin-x64)');
+  process.exit(0);
+}
+
 const VERSION = '2.30.1';
 const ASSET_NAME = `tiledb-macos-x86_64-${VERSION}-6ea48ca.tar.gz`;
 const URL = `https://github.com/TileDB-Inc/TileDB/releases/download/${VERSION}/${ASSET_NAME}`;
@@ -18,35 +24,64 @@ fs.mkdirSync(DEST_DIR, { recursive: true });
 
 console.log(`Downloading TileDB from ${URL}...`);
 
-https.get(URL, (response) => {
-  if (response.statusCode === 301 || response.statusCode === 302) {
-    const redirectUrl = response.headers.location;
-    if (!redirectUrl.startsWith('https://github.com/') && !redirectUrl.startsWith('https://objects.githubusercontent.com/')) {
-      throw new Error(`Insecure redirect rejected: ${redirectUrl}`);
-    }
-    return https.get(redirectUrl, processDownload);
-  }
-  processDownload(response);
-  
-  function processDownload(res) {
-    if (res.statusCode !== 200) {
-      console.error(`Failed to download: ${res.statusCode}`);
+/**
+ * Follows HTTPS redirects securely up to maxRedirects.
+ * Only allows redirects to github.com and objects.githubusercontent.com.
+ */
+function secureGet(url, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if ((res.statusCode === 301 || res.statusCode === 302) && maxRedirects > 0) {
+        const loc = res.headers.location;
+        if (!loc || (!loc.startsWith('https://github.com/') && !loc.startsWith('https://objects.githubusercontent.com/'))) {
+          return reject(new Error(`Insecure redirect rejected: ${loc}`));
+        }
+        res.resume(); // drain the response
+        return resolve(secureGet(loc, maxRedirects - 1));
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`Failed to download: HTTP ${res.statusCode}`));
+      }
+      resolve(res);
+    }).on('error', reject);
+  });
+}
+
+const crypto = require('crypto');
+const EXPECTED_HASH = "3592fbc675b2e803112c7a1f1248ea29ccf7eef5767236cff515646380792398";
+
+secureGet(URL).then((res) => {
+  const tempFilePath = path.join(__dirname, 'temp.tar.gz');
+  const fileStream = fs.createWriteStream(tempFilePath);
+  const hash = crypto.createHash('sha256');
+
+  res.pipe(fileStream);
+  res.on('data', chunk => hash.update(chunk));
+
+  res.on('end', () => {
+    const digest = hash.digest('hex');
+    if (digest !== EXPECTED_HASH) {
+      fs.unlinkSync(tempFilePath);
+      console.error('Checksum mismatch! Possible MITM or tampered binary.');
       process.exit(1);
     }
-    
-    res.pipe(tar.x({
+
+    const readStream = fs.createReadStream(tempFilePath);
+    readStream.pipe(tar.x({
       C: DEST_DIR,
       strip: 1
     }))
     .on('finish', () => {
       console.log('Extraction complete.');
+      try { fs.unlinkSync(tempFilePath); } catch (e) {}
     })
     .on('error', (err) => {
       console.error('Extraction error:', err);
       process.exit(1);
     });
-  }
-}).on('error', (err) => {
+  });
+}).catch((err) => {
   console.error('Download error:', err);
   process.exit(1);
 });

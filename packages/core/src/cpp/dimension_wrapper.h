@@ -23,6 +23,7 @@ private:
     Napi::Value GetType(const Napi::CallbackInfo& info);
     Napi::Value GetDomain(const Napi::CallbackInfo& info);
     Napi::Value GetTileExtent(const Napi::CallbackInfo& info);
+    Napi::Value SetFilterList(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
     tiledb::Dimension* dim_;

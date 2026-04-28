@@ -1,7 +1,8 @@
 #include "attribute_wrapper.h"
 #include "context_wrapper.h"
-#include "filter_wrapper.h"
+#include "filter_list_wrapper.h"
 #include "enum_helpers.h"
+#include <tiledb/attribute_experimental.h>
 
 Napi::FunctionReference AttributeWrapper::constructor;
 
@@ -14,6 +15,7 @@ Napi::Object AttributeWrapper::Init(Napi::Env env, Napi::Object exports) {
         InstanceMethod("setNullable", &AttributeWrapper::SetNullable),
         InstanceMethod("nullable", &AttributeWrapper::GetNullable),
         InstanceMethod("setFilterList", &AttributeWrapper::SetFilterList),
+        InstanceMethod("setEnumerationName", &AttributeWrapper::SetEnumerationName),
         InstanceMethod("close", &AttributeWrapper::Close)
     });
 
@@ -146,10 +148,25 @@ Napi::Value AttributeWrapper::SetFilterList(const Napi::CallbackInfo& info) {
         return env.Undefined();
     }
     try {
-        // We accept a native FilterList object
-        // For simplicity, we'll add individual filters via separate calls
-        Napi::TypeError::New(env, "Use filter list wrapper - not yet wired").ThrowAsJavaScriptException();
+        FilterListWrapper* fl_wrap = Napi::ObjectWrap<FilterListWrapper>::Unwrap(info[0].As<Napi::Object>());
+        this->attr_->set_filter_list(fl_wrap->get_filter_list());
     } catch (const std::exception& e) {
+        Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
+}
+
+Napi::Value AttributeWrapper::SetEnumerationName(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 2 || !info[0].IsObject() || !info[1].IsString()) {
+        Napi::TypeError::New(env, "Expected (Context ctx, string name)").ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+    try {
+        ContextWrapper* ctx_wrap = Napi::ObjectWrap<ContextWrapper>::Unwrap(info[0].As<Napi::Object>());
+        std::string enum_name = info[1].As<Napi::String>().Utf8Value();
+        tiledb::AttributeExperimental::set_enumeration_name(ctx_wrap->get_context(), *attr_, enum_name);
+    } catch(const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
     }
     return env.Undefined();

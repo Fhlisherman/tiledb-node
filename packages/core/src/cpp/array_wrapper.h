@@ -13,11 +13,15 @@ public:
     ArrayWrapper(const Napi::CallbackInfo& info);
     ~ArrayWrapper();
 
+    tiledb::Array& get_array() { return *array_; }
+
 private:
     static Napi::FunctionReference constructor;
 
-    // Static method
+    // Static methods (all async / non-blocking)
     static Napi::Value Create(const Napi::CallbackInfo& info);
+    static Napi::Value Consolidate(const Napi::CallbackInfo& info);
+    static Napi::Value Vacuum(const Napi::CallbackInfo& info);
 
     // Instance methods
     Napi::Value Open(const Napi::CallbackInfo& info);
@@ -27,6 +31,14 @@ private:
     Napi::Value IsOpen(const Napi::CallbackInfo& info);
     Napi::Value GetSchema(const Napi::CallbackInfo& info);
 
+    // Metadata methods
+    Napi::Value PutMetadata(const Napi::CallbackInfo& info);
+    Napi::Value GetMetadata(const Napi::CallbackInfo& info);
+    Napi::Value DeleteMetadata(const Napi::CallbackInfo& info);
+    Napi::Value GetMetadataNum(const Napi::CallbackInfo& info);
+    Napi::Value GetMetadataByIndex(const Napi::CallbackInfo& info);
+
     tiledb::Array* array_;
     tiledb::Context* ctx_ref_;
+    std::string uri_;
 };

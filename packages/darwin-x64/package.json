@@ -4,15 +4,18 @@
   "os": ["darwin"],
   "cpu": ["x64"],
   "main": "build/Release/tiledb_bindings.node",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "prebuild": "node scripts/download.js",
     "build": "node-gyp rebuild"
   },
   "dependencies": {
-    "node-addon-api": "^8.7.0"
+    "node-addon-api": "~8.7.0",
+    "tar": "~7.5.11"
   },
   "devDependencies": {
-    "tar": "^7.5.11",
-    "node-gyp": "^10.0.0"
+    "node-gyp": "~11.1.0"
   }
 }
