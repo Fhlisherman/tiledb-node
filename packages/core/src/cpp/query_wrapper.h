@@ -8,12 +8,8 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "context_wrapper.h"
-#include "array_wrapper.h"
-#include "subarray_wrapper.h"
-#include "query_condition_wrapper.h"
 #include <tiledb/tiledb_experimental>
-#include <vector>
+#include <list>
 
 class QueryWrapper : public Napi::ObjectWrap<QueryWrapper> {
 public:
@@ -43,6 +39,7 @@ private:
     std::unordered_map<std::string, Napi::Reference<Napi::Value>> pinned_buffers_;
     std::map<std::string, std::unique_ptr<uint64_t>> buff_sizes_;
     std::vector<tiledb::ChannelOperation> pinned_operations_;
+    std::list<std::string> pinned_update_values_;
 };
 
 #endif

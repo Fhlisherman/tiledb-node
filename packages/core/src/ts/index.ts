@@ -21,27 +21,27 @@ import type {
   TileDBVersion
 } from './bindings';
 
+import { writeFileSync } from 'fs';
+
 let nativeData: TileDBNativeBindings | undefined;
 
 const platform = process.platform;
 const arch = process.arch;
 
-if (platform === 'darwin' && arch === 'arm64') {
-  nativeData = require('@tiledb-node/darwin-arm64');
-} else if (platform === 'darwin' && arch === 'x64') {
-  nativeData = require('@tiledb-node/darwin-x64');
-} else if (platform === 'linux' && arch === 'arm64') {
-  nativeData = require('@tiledb-node/linux-arm64');
-} else if (platform === 'linux' && arch === 'x64') {
-  nativeData = require('@tiledb-node/linux-x64');
-} else if (platform === 'win32' && arch === 'x64') {
-  nativeData = require('@tiledb-node/win32-x64');
-} else {
-  throw new Error(`Unsupported OS/Architecture combination: ${platform}-${arch}`);
+const PlatformArchMapper: Record<string, TileDBNativeBindings> = {
+  "darwin-arm64": require('@tiledb-node/darwin-arm64'),
+  "darwin-x64": require('@tiledb-node/darwin-x64'),
+  "linux-arm64": require('@tiledb-node/linux-arm64'),
+  "linux-x64": require('@tiledb-node/linux-x64'),
+  "win32-x64": require('@tiledb-node/win32-x64')
 }
 
+const key = `${platform}-${arch}`;
+
+nativeData = PlatformArchMapper[key];
+
 if (!nativeData) {
-  throw new Error(`Failed to load TileDB native bindings for ${platform}-${arch}. Ensure the optional dependency is installed.`);
+  throw new Error(`Unsupported OS/Architecture combination: ${platform}-${arch}`);
 }
 
 /**
@@ -1509,7 +1509,15 @@ export const Stats = {
   /** Resets all collected performance statistics. */
   reset: () => { nativeData!.Stats.reset(); },
   /** Returns a string representation of all collected statistics. */
-  dumpStr: () => { return nativeData!.Stats.dumpStr(); }
+  dumpStr: () => { return nativeData!.Stats.dumpStr(); },
+  /**
+   * Writes all collected statistics to a file.
+   * @param filePath - Absolute or relative path to the output file.
+   */
+  dump: (filePath: string) => {
+    const stats = nativeData!.Stats.dumpStr();
+    writeFileSync(filePath, stats, 'utf-8');
+  }
 };
 
 export type { TileDBVersion };

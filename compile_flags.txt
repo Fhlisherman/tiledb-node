@@ -3,4 +3,5 @@
 -I/usr/local/include
 -I/opt/homebrew/include
 -std=c++17
+-xc++
 -DNAPI_CPP_EXCEPTIONS

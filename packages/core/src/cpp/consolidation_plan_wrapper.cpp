@@ -1,5 +1,6 @@
 #include "consolidation_plan_wrapper.h"
 #include "context_wrapper.h"
+#include "array_wrapper.h"
 
 Napi::FunctionReference ConsolidationPlanWrapper::constructor;
 

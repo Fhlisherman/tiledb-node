@@ -1,5 +1,7 @@
 #include "array_schema_evolution_wrapper.h"
 #include "context_wrapper.h"
+#include "attribute_wrapper.h"
+#include "enumeration_wrapper.h"
 
 Napi::FunctionReference ArraySchemaEvolutionWrapper::constructor;
 

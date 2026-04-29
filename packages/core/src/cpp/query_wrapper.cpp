@@ -1,5 +1,9 @@
 #include "query_wrapper.h"
 #include "enum_helpers.h"
+#include "query_condition_wrapper.h"
+#include "context_wrapper.h"
+#include "array_wrapper.h"
+#include "subarray_wrapper.h"
 #include <tiledb/tiledb_experimental>
 
 Napi::FunctionReference QueryWrapper::constructor;
@@ -232,20 +236,25 @@ Napi::Value QueryWrapper::AddUpdateValue(const Napi::CallbackInfo& info) {
         tiledb_datatype_t type = parse_datatype(info[2].As<Napi::String>().Utf8Value());
         Napi::Value val = info[1];
         
+        auto store_val = [this](const void* p, size_t size) -> const void* {
+            this->pinned_update_values_.emplace_back(static_cast<const char*>(p), size);
+            return this->pinned_update_values_.back().data();
+        };
+
         switch (type) {
             case TILEDB_INT32: {
                 int32_t v = val.As<Napi::Number>().Int32Value();
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(int32_t));
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(int32_t)), sizeof(int32_t));
                 break;
             }
             case TILEDB_FLOAT64: {
                 double v = val.As<Napi::Number>().DoubleValue();
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(double));
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(double)), sizeof(double));
                 break;
             }
             case TILEDB_FLOAT32: {
                 float v = val.As<Napi::Number>().FloatValue();
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(float));
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(float)), sizeof(float));
                 break;
             }
             case TILEDB_INT64: {
@@ -255,7 +264,7 @@ Napi::Value QueryWrapper::AddUpdateValue(const Napi::CallbackInfo& info) {
                     Napi::RangeError::New(env, "BigInt value exceeds int64 range").ThrowAsJavaScriptException();
                     return env.Undefined();
                 }
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(int64_t));
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(int64_t)), sizeof(int64_t));
                 break;
             }
             case TILEDB_UINT64: {
@@ -265,39 +274,39 @@ Napi::Value QueryWrapper::AddUpdateValue(const Napi::CallbackInfo& info) {
                     Napi::RangeError::New(env, "BigInt value exceeds uint64 range").ThrowAsJavaScriptException();
                     return env.Undefined();
                 }
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(uint64_t));
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(uint64_t)), sizeof(uint64_t));
                 break;
             }
             case TILEDB_INT8: {
                  int8_t v = static_cast<int8_t>(val.As<Napi::Number>().Int32Value());
-                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(int8_t));
+                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(int8_t)), sizeof(int8_t));
                  break;
             }
             case TILEDB_UINT8: {
                  uint8_t v = static_cast<uint8_t>(val.As<Napi::Number>().Uint32Value());
-                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(uint8_t));
+                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(uint8_t)), sizeof(uint8_t));
                  break;
             }
             case TILEDB_INT16: {
                  int16_t v = static_cast<int16_t>(val.As<Napi::Number>().Int32Value());
-                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(int16_t));
+                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(int16_t)), sizeof(int16_t));
                  break;
             }
             case TILEDB_UINT16: {
                  uint16_t v = static_cast<uint16_t>(val.As<Napi::Number>().Uint32Value());
-                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(uint16_t));
+                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(uint16_t)), sizeof(uint16_t));
                  break;
             }
             case TILEDB_UINT32: {
                  uint32_t v = val.As<Napi::Number>().Uint32Value();
-                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), &v, 1 * sizeof(uint32_t));
+                 tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(&v, sizeof(uint32_t)), sizeof(uint32_t));
                  break;
             }
             case TILEDB_STRING_UTF8:
             case TILEDB_STRING_ASCII:
             case TILEDB_CHAR: {
                 std::string v = val.As<Napi::String>().Utf8Value();
-                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), v.c_str(), v.size());
+                tiledb::QueryExperimental::add_update_value_to_query(this->query_->ctx(), *this->query_, attr.c_str(), store_val(v.c_str(), v.size()), v.size());
                 break;
             }
             default:

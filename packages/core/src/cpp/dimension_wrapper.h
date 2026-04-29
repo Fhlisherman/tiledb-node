@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NAPI_CPP_EXCEPTIONS
-#define NAPI_CPP_EXCEPTIONS 1
-#endif
-
 #include <napi.h>
 #include <tiledb/tiledb>
 

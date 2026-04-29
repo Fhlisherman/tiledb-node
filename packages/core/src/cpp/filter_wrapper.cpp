@@ -5,7 +5,6 @@
 
 Napi::FunctionReference FilterWrapper::constructor;
 
-// Map string filter type names to TileDB enum values
 static tiledb_filter_type_t parse_filter_type(const std::string& type_str) {
     static const std::unordered_map<std::string, tiledb_filter_type_t> map = {
         {"NONE", TILEDB_FILTER_NONE},

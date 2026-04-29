@@ -1,5 +1,4 @@
 #include "subarray_wrapper.h"
-#include "enum_helpers.h"
 
 Napi::FunctionReference SubarrayWrapper::constructor;
 

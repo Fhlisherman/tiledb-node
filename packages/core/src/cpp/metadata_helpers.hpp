@@ -3,10 +3,6 @@
 #include <napi.h>
 #include <tiledb/tiledb>
 
-/**
- * Converts TileDB metadata values to Napi::Value.
- * Shared between ArrayWrapper and GroupWrapper to avoid code duplication.
- */
 inline Napi::Value convert_metadata_to_napi(Napi::Env env, tiledb_datatype_t type, uint32_t value_num, const void* value) {
     if (value == nullptr) return env.Null();
 

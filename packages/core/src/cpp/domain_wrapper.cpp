@@ -29,7 +29,6 @@ Napi::Object DomainWrapper::NewInstance(Napi::Env env, const tiledb::Context& ct
     return obj;
 }
 
-// Constructor: new Domain(ctx)
 DomainWrapper::DomainWrapper(const Napi::CallbackInfo& info) : Napi::ObjectWrap<DomainWrapper>(info) {
     Napi::Env env = info.Env();
 

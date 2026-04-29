@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Context, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Query, Subarray } from '../ts/index';
+import { Context, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Query, Subarray, FilterType } from '../ts/index';
 import * as fs from 'fs';
 
 describe('Data Filtering (FilterList)', () => {
@@ -25,7 +25,7 @@ describe('Data Filtering (FilterList)', () => {
     });
 
     it('should create filters for various compression types', () => {
-        const types = ['ZSTD', 'LZ4', 'BZIP2', 'RLE', 'DOUBLE_DELTA', 'NONE'];
+        const types: FilterType[] = ['ZSTD', 'LZ4', 'BZIP2', 'RLE', 'DOUBLE_DELTA', 'NONE'];
         for (const t of types) {
             const filter = new Filter(ctx, t);
             expect(filter.type()).toBe(t);

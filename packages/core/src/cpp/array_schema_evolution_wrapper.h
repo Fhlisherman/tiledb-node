@@ -1,16 +1,10 @@
 #pragma once
 
-#ifndef NAPI_CPP_EXCEPTIONS
-#define NAPI_CPP_EXCEPTIONS 1
-#endif
-
 #include <napi.h>
 #include <tiledb/tiledb>
 #include <tiledb/tiledb_experimental>
 #include <tiledb/array_schema_evolution.h>
 #include <memory>
-#include "attribute_wrapper.h"
-#include "enumeration_wrapper.h"
 
 class ArraySchemaEvolutionWrapper : public Napi::ObjectWrap<ArraySchemaEvolutionWrapper> {
 public:

@@ -4,8 +4,6 @@
 #include <string>
 #include <stdexcept>
 
-// Maps string datatype names (e.g. "INT32", "FLOAT64") to tiledb_datatype_t enum values.
-// Used across Dimension, Attribute, and other wrappers.
 inline tiledb_datatype_t parse_datatype(const std::string& type_str) {
     if (type_str == "INT32") return TILEDB_INT32;
     if (type_str == "INT64") return TILEDB_INT64;

@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NAPI_CPP_EXCEPTIONS
-#define NAPI_CPP_EXCEPTIONS 1
-#endif
-
 #include <napi.h>
 #include <tiledb/tiledb>
 
@@ -16,7 +12,6 @@ public:
 private:
     static Napi::FunctionReference constructor;
 
-    // Static methods corresponding to tiledb::Object
     static Napi::Value Type(const Napi::CallbackInfo& info);
     static Napi::Value Remove(const Napi::CallbackInfo& info);
     static Napi::Value Move(const Napi::CallbackInfo& info);

@@ -1,14 +1,9 @@
 #pragma once
 
-#ifndef NAPI_CPP_EXCEPTIONS
-#define NAPI_CPP_EXCEPTIONS 1
-#endif
-
 #include <napi.h>
 #include <tiledb/tiledb>
 #include <tiledb/consolidation_plan_experimental.h>
 #include <memory>
-#include "array_wrapper.h"
 
 class ConsolidationPlanWrapper : public Napi::ObjectWrap<ConsolidationPlanWrapper> {
 public:

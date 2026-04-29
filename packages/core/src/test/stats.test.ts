@@ -97,4 +97,49 @@ describe('Stats API', () => {
     expect(typeof stats).toBe('string');
     Stats.disable();
   });
+
+  it('should dump stats to a file via Stats.dump()', async () => {
+    Stats.enable();
+
+    // Do some work so there are stats to dump
+    const dim = new Dimension(ctx, 'd1', 'INT32', 1, 5, 5);
+    const dom = new Domain(ctx);
+    dom.addDimension(dim);
+    const attr = new Attribute(ctx, 'a1', 'INT32');
+    const schema = new ArraySchema(ctx, 'DENSE');
+    schema.setDomain(dom);
+    schema.addAttribute(attr);
+
+    const dumpArrayUri = path.join(testDir, 'dump_array');
+    await TileDBArray.create(dumpArrayUri, schema);
+
+    const arr = new TileDBArray(ctx, dumpArrayUri);
+    await arr.open('WRITE');
+    const query = new Query(ctx, arr, 'WRITE');
+    query.setLayout('ROW_MAJOR');
+    query.setDataBuffer('a1', new Int32Array([1, 2, 3, 4, 5]));
+    const sub = new Subarray(ctx, arr);
+    sub.addRange('d1', 1, 5);
+    query.setSubarray(sub);
+    query.submit();
+
+    // Dump stats to file
+    const statsFilePath = path.join(testDir, 'stats_output.txt');
+    Stats.dump(statsFilePath);
+
+    // Verify file was written and has content
+    expect(fs.existsSync(statsFilePath)).toBe(true);
+    const fileContent = fs.readFileSync(statsFilePath, 'utf-8');
+    expect(fileContent.length).toBeGreaterThan(0);
+    expect(fileContent).toContain('Context.Query.Writer.');
+
+    Stats.disable();
+    query.close();
+    sub.close();
+    arr.close();
+    schema.close();
+    attr.close();
+    dom.close();
+    dim.close();
+  });
 });

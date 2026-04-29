@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef NAPI_CPP_EXCEPTIONS
-#define NAPI_CPP_EXCEPTIONS 1
-#endif
-
 #include <napi.h>
 #include <tiledb/tiledb>
 #include <tiledb/vfs.h>
@@ -44,7 +40,6 @@ private:
     Napi::Value CopyDir(const Napi::CallbackInfo& info);
     Napi::Value Touch(const Napi::CallbackInfo& info);
 
-    // File handlers
     Napi::Value Open(const Napi::CallbackInfo& info);
     Napi::Value Read(const Napi::CallbackInfo& info);
     Napi::Value Write(const Napi::CallbackInfo& info);
