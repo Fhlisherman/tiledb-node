@@ -20,8 +20,8 @@ private:
     Napi::Value AddRange(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Subarray* subarray_;
-    tiledb::Array* array_ref_;
+    tiledb::Subarray* subarray_ = nullptr;
+    tiledb::Array* array_ref_ = nullptr;
 };
 
 #endif

@@ -25,5 +25,5 @@ private:
     Napi::Value SetEnumerationName(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Attribute* attr_;
+    tiledb::Attribute* attr_ = nullptr;
 };

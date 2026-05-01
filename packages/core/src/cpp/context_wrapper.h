@@ -18,6 +18,6 @@ private:
     Napi::Value GetVersion(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Context* ctx_;
+    tiledb::Context* ctx_ = nullptr;
 };
 

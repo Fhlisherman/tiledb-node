@@ -1,0 +1,27 @@
+# CODEOWNERS for tiledb-node
+# These owners will be requested for review when someone opens a PR
+# that changes files in their areas.
+
+# Default owners for everything not matched below
+* @tiledb-node/maintainers
+
+# Core TypeScript bindings
+/packages/core/src/ts/ @tiledb-node/maintainers
+
+# C++ native addon code
+/packages/core/src/cpp/ @tiledb-node/maintainers
+
+# Platform-specific packages
+/packages/darwin-arm64/ @tiledb-node/maintainers
+/packages/darwin-x64/ @tiledb-node/maintainers
+/packages/linux-arm64/ @tiledb-node/maintainers
+/packages/linux-x64/ @tiledb-node/maintainers
+/packages/win32-x64/ @tiledb-node/maintainers
+
+# Build and CI configuration
+.github/workflows/ @tiledb-node/maintainers
+package.json @tiledb-node/maintainers
+pnpm-workspace.yaml @tiledb-node/maintainers
+
+# Security configuration
+SECURITY.md @tiledb-node/maintainers

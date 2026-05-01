@@ -21,5 +21,5 @@ private:
     Napi::Value GetDimensions(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Domain* domain_;
+    tiledb::Domain* domain_ = nullptr;
 };

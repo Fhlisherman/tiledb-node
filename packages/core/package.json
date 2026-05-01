@@ -10,7 +10,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest run --pool=forks"
+    "test": "vitest run --pool=forks",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ts/**/*.ts"
   },
   "optionalDependencies": {
     "@tiledb-node/darwin-arm64": "workspace:*",

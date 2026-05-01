@@ -192,6 +192,9 @@ Napi::Value GroupWrapper::Close(const Napi::CallbackInfo& info) {
 Napi::Value GroupWrapper::IsOpen(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     try {
+        if (this->group_ == nullptr) {
+            return Napi::Boolean::New(env, false);
+        }
         return Napi::Boolean::New(env, this->group_->is_open());
     } catch (const std::exception& e) {
         Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();

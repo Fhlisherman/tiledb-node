@@ -9,7 +9,12 @@ public:
     GroupWrapper(const Napi::CallbackInfo& info);
     ~GroupWrapper();
 
-    tiledb::Group& get_group() { return *group_; }
+    tiledb::Group& get_group() {
+        if (group_ == nullptr) {
+            throw std::runtime_error("Group has been closed");
+        }
+        return *group_;
+    }
 
 private:
     static Napi::FunctionReference constructor;
@@ -39,6 +44,6 @@ private:
     Napi::Value GetMetadataNum(const Napi::CallbackInfo& info);
     Napi::Value GetMetadataByIndex(const Napi::CallbackInfo& info);
 
-    tiledb::Group* group_;
-    tiledb::Context* ctx_ref_;
+    tiledb::Group* group_ = nullptr;
+    tiledb::Context* ctx_ref_ = nullptr;
 };

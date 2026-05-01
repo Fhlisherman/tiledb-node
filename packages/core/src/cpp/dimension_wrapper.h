@@ -22,5 +22,5 @@ private:
     Napi::Value SetFilterList(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Dimension* dim_;
+    tiledb::Dimension* dim_ = nullptr;
 };

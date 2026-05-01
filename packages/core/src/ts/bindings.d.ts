@@ -10,6 +10,9 @@ export type QueryConditionOp = 'LT' | 'LE' | 'GT' | 'GE' | 'EQ' | 'NEQ';
 export type QueryConditionCombinationOp = 'AND' | 'OR' | 'NOT';
 export type VFSMode = 'read' | 'write' | 'append' | 'READ' | 'WRITE' | 'APPEND';
 
+/** Union type representing all possible TileDB metadata values. */
+export type MetadataValue = string | number | bigint | null;
+
 export interface TileDBVersion {
   major: number;
   minor: number;
@@ -80,7 +83,7 @@ export declare class NativeDomain {
   addDimension(dim: NativeDimension): void;
   type(): Datatype | FilterType | ArrayType | string;
   ndim(): number;
-  dimensions(): any[];
+  dimensions(): Array<Record<string, unknown>>;
   close(): void;
 }
 
@@ -123,12 +126,12 @@ export declare class NativeArray {
   queryType(): QueryType;
   uri(): string;
   isOpen(): boolean;
-  schema(): any;
-  putMetadata(key: string, datatype: Datatype, value: any): void;
-  getMetadata(key: string): any;
+  schema(): Record<string, unknown>;
+  putMetadata(key: string, datatype: Datatype, value: MetadataValue): void;
+  getMetadata(key: string): MetadataValue;
   deleteMetadata(key: string): void;
   getMetadataNum(): number;
-  getMetadataByIndex(index: number): { key: string, type: string, value: any };
+  getMetadataByIndex(index: number): { key: string, type: string, value: MetadataValue };
 }
 
 
@@ -153,7 +156,7 @@ export declare class NativeQuery {
   setDataBuffer(attribute: string, buffer: ArrayBufferView): void;
   setOffsetsBuffer(attribute: string, buffer: BigUint64Array | BigInt64Array): void;
   setValidityBuffer(attribute: string, buffer: Uint8Array): void;
-  addUpdateValue(attribute: string, value: any, datatype: Datatype): void;
+  addUpdateValue(attribute: string, value: MetadataValue, datatype: Datatype): void;
   submit(): string;
   submitAsync(): Promise<string>;
   queryStatus(): QueryStatus;
@@ -185,11 +188,11 @@ export declare class NativeGroup {
   removeMember(name_or_uri: string): void;
   getMemberCount(): number;
   getMemberByIndex(index: number): { uri: string, type: string, name: string | null };
-  putMetadata(key: string, datatype: Datatype, value: any): void;
-  getMetadata(key: string): any;
+  putMetadata(key: string, datatype: Datatype, value: MetadataValue): void;
+  getMetadata(key: string): MetadataValue;
   deleteMetadata(key: string): void;
   getMetadataNum(): number;
-  getMetadataByIndex(index: number): { key: string, type: string, value: any };
+  getMetadataByIndex(index: number): { key: string, type: string, value: MetadataValue };
 }
 
 export declare class NativeVFS {
@@ -254,7 +257,7 @@ export interface TileDBNativeBindings {
   FragmentInfo: typeof NativeFragmentInfo;
   Stats: NativeStats;
   Enumeration: {
-    create(ctx: NativeContext, name: string, datatype: Datatype, values: any[]): NativeEnumeration;
+    create(ctx: NativeContext, name: string, datatype: Datatype, values: MetadataValue[]): NativeEnumeration;
   };
   ArraySchemaEvolution: {
     new(ctx: NativeContext): NativeArraySchemaEvolution;

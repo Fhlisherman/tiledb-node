@@ -26,8 +26,8 @@ private:
     Napi::Value Combine(const Napi::CallbackInfo& info);
     Napi::Value Negate(const Napi::CallbackInfo& info);
 
-    tiledb::QueryCondition* condition_;
-    ContextWrapper* ctx_ref_;
+    tiledb::QueryCondition* condition_ = nullptr;
+    ContextWrapper* ctx_ref_ = nullptr;
 };
 
 #endif

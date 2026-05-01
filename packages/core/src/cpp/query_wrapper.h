@@ -35,7 +35,7 @@ private:
     Napi::Value Stats(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Query* query_;
+    tiledb::Query* query_ = nullptr;
     std::unordered_map<std::string, Napi::Reference<Napi::Value>> pinned_buffers_;
     std::map<std::string, std::unique_ptr<uint64_t>> buff_sizes_;
     std::vector<tiledb::ChannelOperation> pinned_operations_;

@@ -31,5 +31,5 @@ private:
     Napi::Value AddDimensionLabel(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::ArraySchema* schema_;
+    tiledb::ArraySchema* schema_ = nullptr;
 };

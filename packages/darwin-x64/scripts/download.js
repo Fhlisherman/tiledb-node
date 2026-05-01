@@ -14,6 +14,7 @@ const ASSET_NAME = `tiledb-macos-x86_64-${VERSION}-6ea48ca.tar.gz`;
 const URL = `https://github.com/TileDB-Inc/TileDB/releases/download/${VERSION}/${ASSET_NAME}`;
 
 const DEST_DIR = path.join(__dirname, '..', 'tiledb-dist');
+const DEST_DIR_RESOLVED = path.resolve(DEST_DIR);
 
 if (fs.existsSync(DEST_DIR)) {
   console.log('TileDB binaries already downloaded.');
@@ -70,7 +71,15 @@ secureGet(URL).then((res) => {
     const readStream = fs.createReadStream(tempFilePath);
     readStream.pipe(tar.x({
       C: DEST_DIR,
-      strip: 1
+      strip: 1,
+      filter: (entryPath) => {
+        const resolved = path.resolve(DEST_DIR_RESOLVED, entryPath);
+        if (!resolved.startsWith(DEST_DIR_RESOLVED + path.sep) && resolved !== DEST_DIR_RESOLVED) {
+          console.error(`Zip-Slip Detected: ${entryPath} resolves outside destination`);
+          return false;
+        }
+        return true;
+      }
     }))
     .on('finish', () => {
       console.log('Extraction complete.');

@@ -19,5 +19,5 @@ private:
     Napi::Value SetOption(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Filter* filter_;
+    tiledb::Filter* filter_ = nullptr;
 };

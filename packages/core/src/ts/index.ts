@@ -18,7 +18,8 @@ import type {
   NativeEnumeration,
   NativeArraySchemaEvolution,
   NativeConsolidationPlan,
-  TileDBVersion
+  TileDBVersion,
+  MetadataValue
 } from './bindings';
 
 import { writeFileSync } from 'fs';
@@ -82,6 +83,23 @@ export class TileDBError extends Error {
   }
 }
 
+/**
+ * Validates a URI for security before performing TileDB operations.
+ * Blocks path traversal attempts, null bytes, and empty URIs.
+ */
+function validateTileDbUri(uri: string, operation: string): void {
+  if (!uri || typeof uri !== 'string' || uri.length === 0) {
+    throw new TileDBError(`Invalid URI for ${operation}: URI must be a non-empty string`);
+  }
+  if (uri.includes('\0')) {
+    throw new TileDBError(`Null bytes not allowed in URI for ${operation}`);
+  }
+  // Block path traversal for local file URIs (those without a scheme like s3://, hdfs://, etc.)
+  if (!uri.includes('://') && uri.includes('..')) {
+    throw new TileDBError(`Path traversal not allowed in URI for ${operation}: ${uri}`);
+  }
+}
+
 
 /** TileDB attribute/dimension data type. Maps to `tiledb_datatype_t`. */
 export type Datatype = 'INT32' | 'INT64' | 'FLOAT32' | 'FLOAT64' | 'CHAR' | 'INT8' | 'UINT8' | 'INT16' | 'UINT16' | 'UINT32' | 'UINT64' | 'STRING_ASCII' | 'STRING_UTF8' | 'STRING_UTF16' | 'STRING_UTF32' | 'STRING_UCS2' | 'STRING_UCS4' | 'ANY' | 'DATETIME_YEAR' | 'DATETIME_MONTH' | 'DATETIME_WEEK' | 'DATETIME_DAY' | 'DATETIME_HR' | 'DATETIME_MIN' | 'DATETIME_SEC' | 'DATETIME_MS' | 'DATETIME_US' | 'DATETIME_NS' | 'DATETIME_PS' | 'DATETIME_FS' | 'DATETIME_AS' | 'TIME_HR' | 'TIME_MIN' | 'TIME_SEC' | 'TIME_MS' | 'TIME_US' | 'TIME_NS' | 'TIME_PS' | 'TIME_FS' | 'TIME_AS' | 'BLOB';
@@ -119,8 +137,7 @@ export type VFSMode = 'read' | 'write' | 'append' | 'READ' | 'WRITE' | 'APPEND';
  * ```
  */
 export class Context {
-  // @ts-ignore
-  private nativeContext: NativeContext | null;
+  private nativeContext: NativeContext | null = null;
 
   /**
    * @param config - Optional {@link Config} to customise the TileDB engine.
@@ -505,6 +522,7 @@ export class TileDBArray {
    * @returns Resolves to `true` on success.
    */
   public static create(uri: string, schema: ArraySchema): Promise<boolean> {
+    validateTileDbUri(uri, 'create');
     return nativeData!.Array.create(uri, schema.native);
   }
 
@@ -515,6 +533,7 @@ export class TileDBArray {
    * @param config - Optional consolidation config overrides.
    */
   public static consolidate(ctx: Context, uri: string, config?: Config): Promise<void> {
+    validateTileDbUri(uri, 'consolidate');
     return nativeData!.Array.consolidate(ctx.native, uri, config?.native);
   }
 
@@ -525,6 +544,7 @@ export class TileDBArray {
    * @param config - Optional vacuum config overrides.
    */
   public static vacuum(ctx: Context, uri: string, config?: Config): Promise<void> {
+    validateTileDbUri(uri, 'vacuum');
     return nativeData!.Array.vacuum(ctx.native, uri, config?.native);
   }
 
@@ -566,7 +586,7 @@ export class TileDBArray {
   /** Returns `true` if the array is currently open. */
   public isOpen(): boolean { return this.nativeArray ? this.nativeArray.isOpen() : false; }
   /** Returns the array's schema descriptor. */
-  public schema(): any { return this.native.schema(); }
+  public schema(): Record<string, unknown> { return this.native.schema(); }
 
   /**
    * Writes a metadata key-value pair. The array must be open for `'WRITE'`.
@@ -574,7 +594,7 @@ export class TileDBArray {
    * @param datatype - Data type of the value.
    * @param value    - The metadata value.
    */
-  public putMetadata(key: string, datatype: Datatype, value: any): void {
+  public putMetadata(key: string, datatype: Datatype, value: MetadataValue): void {
     this.native.putMetadata(key, datatype, value);
   }
 
@@ -583,7 +603,7 @@ export class TileDBArray {
    * @param key - Metadata key.
    * @returns The metadata value, or `null` if not found.
    */
-  public getMetadata(key: string): any {
+  public getMetadata(key: string): MetadataValue {
     return this.native.getMetadata(key);
   }
 
@@ -605,7 +625,7 @@ export class TileDBArray {
    * @param index - Zero-based index.
    * @returns Object with `key`, `type`, and `value` fields.
    */
-  public getMetadataByIndex(index: number): { key: string, type: string, value: any } {
+  public getMetadataByIndex(index: number): { key: string, type: string, value: MetadataValue } {
     return this.native.getMetadataByIndex(index);
   }
 }
@@ -771,7 +791,7 @@ export class Query {
    * @param value     - The new value.
    * @param datatype  - Data type of the value.
    */
-  public addUpdateValue(attribute: string, value: any, datatype: Datatype): void {
+  public addUpdateValue(attribute: string, value: MetadataValue, datatype: Datatype): void {
     this.native.addUpdateValue(attribute, value, datatype);
   }
 
@@ -919,6 +939,7 @@ export class TileDBObject {
    * @returns `'ARRAY'`, `'GROUP'`, or `'INVALID'`.
    */
   public static type(ctx: Context, uri: string): string {
+    validateTileDbUri(uri, 'type');
     return nativeData!.TileDBObject.type(ctx.native, uri);
   }
 
@@ -928,6 +949,7 @@ export class TileDBObject {
    * @param uri - URI of the object to remove.
    */
   public static remove(ctx: Context, uri: string): void {
+    validateTileDbUri(uri, 'remove');
     nativeData!.TileDBObject.remove(ctx.native, uri);
   }
 
@@ -938,6 +960,8 @@ export class TileDBObject {
    * @param newUri - Destination URI.
    */
   public static move(ctx: Context, oldUri: string, newUri: string): void {
+    validateTileDbUri(oldUri, 'move');
+    validateTileDbUri(newUri, 'move');
     nativeData!.TileDBObject.move(ctx.native, oldUri, newUri);
   }
 
@@ -949,6 +973,7 @@ export class TileDBObject {
    * @returns Array of objects with `type` and `uri`.
    */
   public static ls(ctx: Context, uri: string, callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
+    validateTileDbUri(uri, 'ls');
     const results = nativeData!.TileDBObject.ls(ctx.native, uri);
     if (callback) {
       for (const res of results) {
@@ -967,6 +992,7 @@ export class TileDBObject {
    * @returns Array of discovered object descriptors.
    */
   public static walk(ctx: Context, uri: string, order: ObjectOrder, callback?: (type: string, uri: string) => void): { type: string, uri: string }[] {
+    validateTileDbUri(uri, 'walk');
     const results = nativeData!.TileDBObject.walk(ctx.native, uri, order);
     if (callback) {
       for (const res of results) {
@@ -999,6 +1025,7 @@ export class TileDBGroup {
    * @returns `true` on success.
    */
   public static create(ctx: Context, uri: string): boolean {
+    validateTileDbUri(uri, 'create');
     return nativeData!.Group.create(ctx.native, uri);
   }
 
@@ -1009,6 +1036,7 @@ export class TileDBGroup {
    * @param config - Optional config overrides.
    */
   public static consolidate(ctx: Context, uri: string, config?: Config): void {
+    validateTileDbUri(uri, 'consolidate');
     nativeData!.Group.consolidate(ctx.native, uri, config?.native);
   }
 
@@ -1019,6 +1047,7 @@ export class TileDBGroup {
    * @param config - Optional config overrides.
    */
   public static vacuum(ctx: Context, uri: string, config?: Config): void {
+    validateTileDbUri(uri, 'vacuum');
     nativeData!.Group.vacuum(ctx.native, uri, config?.native);
   }
 
@@ -1098,7 +1127,7 @@ export class TileDBGroup {
    * @param datatype - Data type of the value.
    * @param value    - The value to store.
    */
-  public putMetadata(key: string, datatype: Datatype, value: any): void {
+  public putMetadata(key: string, datatype: Datatype, value: MetadataValue): void {
     this.native.putMetadata(key, datatype, value);
   }
 
@@ -1106,7 +1135,7 @@ export class TileDBGroup {
    * Reads group metadata by key.
    * @param key - Metadata key.
    */
-  public getMetadata(key: string): any {
+  public getMetadata(key: string): MetadataValue {
     return this.native.getMetadata(key);
   }
 
@@ -1121,7 +1150,7 @@ export class TileDBGroup {
   }
 
   /** Retrieves metadata by index. */
-  public getMetadataByIndex(index: number): { key: string, type: string, value: any } {
+  public getMetadataByIndex(index: number): { key: string, type: string, value: MetadataValue } {
     return this.native.getMetadataByIndex(index);
   }
 }
@@ -1247,6 +1276,24 @@ export class VFS {
   private nativeVFS: NativeVFS | null;
 
   /**
+   * Validates a URI for security before performing operations.
+   * Blocks path traversal attempts and ensures URI format is valid.
+   */
+  private validateUri(uri: string, operation: string): void {
+    if (!uri || typeof uri !== 'string' || uri.length === 0) {
+      throw new TileDBError(`Invalid URI for ${operation}: URI must be a non-empty string`);
+    }
+    // Block path traversal for local file URIs
+    if (!uri.includes('://') && uri.includes('..')) {
+      throw new TileDBError(`Path traversal not allowed in URI for ${operation}: ${uri}`);
+    }
+    // Reject null bytes
+    if (uri.includes('\0')) {
+      throw new TileDBError(`Null bytes not allowed in URI for ${operation}`);
+    }
+  }
+
+  /**
    * @param ctx    - Active TileDB context.
    * @param config - Optional config overrides.
    */
@@ -1261,46 +1308,46 @@ export class VFS {
   }
 
   /** Creates a cloud storage bucket. */
-  public createBucket(uri: string): void { this.native.createBucket(uri); }
-  /** Deletes a cloud storage bucket. */
-  public removeBucket(uri: string): void { this.native.removeBucket(uri); }
+  public createBucket(uri: string): void { this.validateUri(uri, 'createBucket'); this.native.createBucket(uri); }
+  /** Deletes a cloud storage bucket. WARNING: This operation is irreversible. */
+  public removeBucket(uri: string): void { this.validateUri(uri, 'removeBucket'); this.native.removeBucket(uri); }
   /** Returns `true` if the URI points to a bucket. */
-  public isBucket(uri: string): boolean { return this.native.isBucket(uri); }
-  /** Deletes all objects in a bucket. */
-  public emptyBucket(uri: string): void { this.native.emptyBucket(uri); }
+  public isBucket(uri: string): boolean { this.validateUri(uri, 'isBucket'); return this.native.isBucket(uri); }
+  /** Deletes all objects in a bucket. WARNING: This operation is irreversible. */
+  public emptyBucket(uri: string): void { this.validateUri(uri, 'emptyBucket'); this.native.emptyBucket(uri); }
   /** Returns `true` if the bucket is empty. */
-  public isEmptyBucket(uri: string): boolean { return this.native.isEmptyBucket(uri); }
+  public isEmptyBucket(uri: string): boolean { this.validateUri(uri, 'isEmptyBucket'); return this.native.isEmptyBucket(uri); }
   
   /** Creates a directory. */
-  public createDir(uri: string): void { this.native.createDir(uri); }
+  public createDir(uri: string): void { this.validateUri(uri, 'createDir'); this.native.createDir(uri); }
   /** Returns `true` if the URI is a directory. */
-  public isDir(uri: string): boolean { return this.native.isDir(uri); }
-  /** Deletes a directory and its contents. */
-  public removeDir(uri: string): void { this.native.removeDir(uri); }
+  public isDir(uri: string): boolean { this.validateUri(uri, 'isDir'); return this.native.isDir(uri); }
+  /** Deletes a directory and its contents. WARNING: This operation is irreversible. */
+  public removeDir(uri: string): void { this.validateUri(uri, 'removeDir'); this.native.removeDir(uri); }
   /** Returns the recursive size of a directory in bytes. */
-  public dirSize(uri: string): number { return this.native.dirSize(uri); }
+  public dirSize(uri: string): number { this.validateUri(uri, 'dirSize'); return this.native.dirSize(uri); }
 
   /** Returns `true` if the URI is a file. */
-  public isFile(uri: string): boolean { return this.native.isFile(uri); }
-  /** Deletes a file. */
-  public removeFile(uri: string): void { this.native.removeFile(uri); }
+  public isFile(uri: string): boolean { this.validateUri(uri, 'isFile'); return this.native.isFile(uri); }
+  /** Deletes a file. WARNING: This operation is irreversible. */
+  public removeFile(uri: string): void { this.validateUri(uri, 'removeFile'); this.native.removeFile(uri); }
   /** Returns the size of a file in bytes. */
-  public fileSize(uri: string): number { return this.native.fileSize(uri); }
+  public fileSize(uri: string): number { this.validateUri(uri, 'fileSize'); return this.native.fileSize(uri); }
   
   /** Lists contents of a URI. */
-  public ls(uri: string): string[] { return this.native.ls(uri); }
+  public ls(uri: string): string[] { this.validateUri(uri, 'ls'); return this.native.ls(uri); }
 
-  /** Moves/renames a file. */
-  public moveFile(oldUri: string, newUri: string): void { this.native.moveFile(oldUri, newUri); }
-  /** Moves/renames a directory. */
-  public moveDir(oldUri: string, newUri: string): void { this.native.moveDir(oldUri, newUri); }
+  /** Moves/renames a file. WARNING: This operation is irreversible. */
+  public moveFile(oldUri: string, newUri: string): void { this.validateUri(oldUri, 'moveFile'); this.validateUri(newUri, 'moveFile'); this.native.moveFile(oldUri, newUri); }
+  /** Moves/renames a directory. WARNING: This operation is irreversible. */
+  public moveDir(oldUri: string, newUri: string): void { this.validateUri(oldUri, 'moveDir'); this.validateUri(newUri, 'moveDir'); this.native.moveDir(oldUri, newUri); }
   /** Copies a file. */
-  public copyFile(oldUri: string, newUri: string): void { this.native.copyFile(oldUri, newUri); }
+  public copyFile(oldUri: string, newUri: string): void { this.validateUri(oldUri, 'copyFile'); this.validateUri(newUri, 'copyFile'); this.native.copyFile(oldUri, newUri); }
   /** Copies a directory recursively. */
-  public copyDir(oldUri: string, newUri: string): void { this.native.copyDir(oldUri, newUri); }
+  public copyDir(oldUri: string, newUri: string): void { this.validateUri(oldUri, 'copyDir'); this.validateUri(newUri, 'copyDir'); this.native.copyDir(oldUri, newUri); }
   
   /** Creates an empty file or updates the timestamp of an existing one. */
-  public touch(uri: string): void { this.native.touch(uri); }
+  public touch(uri: string): void { this.validateUri(uri, 'touch'); this.native.touch(uri); }
 
   /**
    * Opens a file for I/O operations.
@@ -1308,6 +1355,7 @@ export class VFS {
    * @param mode - `'read'`, `'write'`, or `'append'`.
    */
   public open(uri: string, mode: VFSMode): void {
+    this.validateUri(uri, 'open');
     this.native.open(uri, mode);
   }
 
@@ -1401,7 +1449,7 @@ export class Enumeration {
    * @param datatype - Data type of the enumeration values.
    * @param values   - Array of values to encode.
    */
-  public static create(ctx: Context, name: string, datatype: Datatype, values: any[]): Enumeration {
+  public static create(ctx: Context, name: string, datatype: Datatype, values: MetadataValue[]): Enumeration {
     return new Enumeration(nativeData!.Enumeration.create(ctx.native, name, datatype, values));
   }
 
@@ -1520,7 +1568,7 @@ export const Stats = {
   }
 };
 
-export type { TileDBVersion };
+export type { TileDBVersion, MetadataValue };
 
 const exportedClasses = [Context, Config, Filter, FilterList, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Subarray, Query, QueryCondition, TileDBObject, TileDBGroup, VFS, FragmentInfo, Enumeration, ArraySchemaEvolution, ConsolidationPlan];
 

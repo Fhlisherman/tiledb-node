@@ -4,7 +4,10 @@
   "scripts": {
     "build": "pnpm --filter '*' run build",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/build packages/*/dist packages/*/tiledb-dist",
-    "test": "pnpm --filter '*' run test"
+    "test": "pnpm --filter '*' run test",
+    "typecheck": "pnpm --filter tiledb-node run typecheck",
+    "lint": "pnpm --filter tiledb-node run lint",
+    "audit": "pnpm audit --audit-level=moderate"
   },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^13.0.1",

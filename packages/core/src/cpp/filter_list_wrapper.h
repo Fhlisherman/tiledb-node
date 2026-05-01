@@ -19,5 +19,5 @@ private:
     Napi::Value SetChunkSize(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::FilterList* filter_list_;
+    tiledb::FilterList* filter_list_ = nullptr;
 };

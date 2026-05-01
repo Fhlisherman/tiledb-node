@@ -20,5 +20,5 @@ private:
     Napi::Value Unset(const Napi::CallbackInfo& info);
     Napi::Value Close(const Napi::CallbackInfo& info);
 
-    tiledb::Config* config_;
+    tiledb::Config* config_ = nullptr;
 };

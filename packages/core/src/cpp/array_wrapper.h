@@ -9,7 +9,12 @@ public:
     ArrayWrapper(const Napi::CallbackInfo& info);
     ~ArrayWrapper();
 
-    tiledb::Array& get_array() { return *array_; }
+    tiledb::Array& get_array() {
+        if (array_ == nullptr) {
+            throw std::runtime_error("Array has been closed");
+        }
+        return *array_;
+    }
 
 private:
     static Napi::FunctionReference constructor;
@@ -34,7 +39,7 @@ private:
     Napi::Value GetMetadataNum(const Napi::CallbackInfo& info);
     Napi::Value GetMetadataByIndex(const Napi::CallbackInfo& info);
 
-    tiledb::Array* array_;
-    tiledb::Context* ctx_ref_;
+    tiledb::Array* array_ = nullptr;
+    tiledb::Context* ctx_ref_ = nullptr;
     std::string uri_;
 };
