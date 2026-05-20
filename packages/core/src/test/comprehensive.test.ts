@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from
 import {
   Context, Config, Dimension, Domain, Attribute, ArraySchema,
   TileDBArray, Query, Subarray, QueryCondition,
-  TileDBGroup, TileDBObject, VFS, FragmentInfo, Stats, TileDBError
+  TileDBGroup, VFS, TileDBError
 } from '../ts/index';
 import * as fs from 'fs';
 import * as path from 'path';

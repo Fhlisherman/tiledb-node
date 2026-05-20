@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Context, Config, Dimension, Domain, Attribute, ArraySchema, TileDBArray, Query, Subarray, QueryCondition } from '../ts/index';
 import * as fs from 'fs';
-import * as path from 'path';
 
 describe('TileDB Core API', () => {
     const ctx = new Context();

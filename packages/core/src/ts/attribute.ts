@@ -1,4 +1,4 @@
-import type { NativeAttribute, NativeFilterList, Datatype, NativeContext } from './bindings';
+import type { NativeAttribute, Datatype } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { FilterList } from './filter_list';

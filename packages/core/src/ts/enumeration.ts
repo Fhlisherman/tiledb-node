@@ -1,4 +1,4 @@
-import type { NativeEnumeration, Datatype, MetadataValue, NativeContext } from './bindings';
+import type { NativeEnumeration, Datatype, MetadataValue } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 

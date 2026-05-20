@@ -1,4 +1,4 @@
-import type { NativeFragmentInfo, NativeContext } from './bindings';
+import type { NativeFragmentInfo } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 

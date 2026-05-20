@@ -11,7 +11,7 @@ export class VFS {
     if (!uri || typeof uri !== 'string' || uri.length === 0) {
       throw new TileDBError(`Invalid URI for ${operation}: URI must be a non-empty string`);
     }
-    if (!uri.includes('://') && uri.includes('..')) {
+    if (uri.includes('..')) {
       throw new TileDBError(`Path traversal not allowed in URI for ${operation}: ${uri}`);
     }
     if (uri.includes('\0')) {

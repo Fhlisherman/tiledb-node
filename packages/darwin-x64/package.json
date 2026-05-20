@@ -1,21 +1,28 @@
 {
   "name": "@tiledb-node/darwin-x64",
   "version": "1.0.0",
-  "os": ["darwin"],
-  "cpu": ["x64"],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
   "main": "build/Release/tiledb_bindings.node",
+  "files": [
+    "build/Release/tiledb_bindings.node",
+    "tiledb-dist"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
     "prebuild": "node scripts/download.js",
-    "build": "node-gyp rebuild"
-  },
-  "dependencies": {
-    "node-addon-api": "~8.7.0",
-    "tar": "~7.5.11"
+    "build": "node-gyp rebuild",
+    "install": "echo 'Binary provided; no build needed'"
   },
   "devDependencies": {
-    "node-gyp": "~11.1.0"
+    "node-addon-api": "~8.7.0",
+    "node-gyp": "~11.1.0",
+    "tar": "~7.5.11"
   }
 }

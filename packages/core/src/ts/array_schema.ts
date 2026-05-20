@@ -1,4 +1,4 @@
-import type { NativeArraySchema, NativeDomain, NativeAttribute, NativeArray, ArrayType, NativeContext } from './bindings';
+import type { NativeArraySchema, ArrayType } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { Domain } from './domain';

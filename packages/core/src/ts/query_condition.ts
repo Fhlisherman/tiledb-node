@@ -1,4 +1,4 @@
-import type { NativeQueryCondition, NativeContext, QueryConditionOp, QueryConditionCombinationOp } from './bindings';
+import type { NativeQueryCondition, QueryConditionOp, QueryConditionCombinationOp } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 

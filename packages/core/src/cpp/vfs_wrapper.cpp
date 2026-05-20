@@ -2,6 +2,7 @@
 #include "context_wrapper.h"
 #include "config_wrapper.h"
 #include <string>
+#include <iostream>
 
 Napi::FunctionReference VFSWrapper::constructor;
 
@@ -67,7 +68,11 @@ VFSWrapper::~VFSWrapper() {
         try {
             const tiledb::Context& ctx = vfs_->context();
             tiledb_vfs_close(ctx.ptr().get(), fh_);
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            std::cerr << "TileDB VFS Close Error in GC: " << e.what() << std::endl;
+        } catch (...) {
+            std::cerr << "TileDB VFS Close Error in GC: unknown exception" << std::endl;
+        }
         fh_ = nullptr;
     }
 }

@@ -1,4 +1,4 @@
-import type { NativeContext, NativeConfig } from './bindings';
+import type { NativeContext } from './bindings';
 import { nativeData } from './native';
 import type { Config } from './config';
 

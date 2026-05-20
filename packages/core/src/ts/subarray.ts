@@ -1,4 +1,4 @@
-import type { NativeSubarray, NativeArray } from './bindings';
+import type { NativeSubarray } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { TileDBArray } from './array';

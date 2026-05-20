@@ -1,4 +1,4 @@
-import type { NativeConsolidationPlan, NativeArray } from './bindings';
+import type { NativeConsolidationPlan } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { TileDBArray } from './array';

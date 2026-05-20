@@ -1,4 +1,4 @@
-import type { NativeArraySchemaEvolution, NativeAttribute, NativeEnumeration } from './bindings';
+import type { NativeArraySchemaEvolution } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { Attribute } from './attribute';

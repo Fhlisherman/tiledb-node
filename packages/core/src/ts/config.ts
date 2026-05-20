@@ -14,18 +14,15 @@ export class Config {
   }
 
   public set(param: string, value: string): void {
-    if (!this.nativeConfig) throw new Error('Config closed');
-    this.nativeConfig.set(param, value);
+    this.native.set(param, value);
   }
 
   public get(param: string): string {
-    if (!this.nativeConfig) throw new Error('Config closed');
-    return this.nativeConfig.get(param);
+    return this.native.get(param);
   }
 
   public unset(param: string): void {
-    if (!this.nativeConfig) throw new Error('Config closed');
-    this.nativeConfig.unset(param);
+    this.native.unset(param);
   }
 
   public close(): void {

@@ -1,4 +1,4 @@
-import type { NativeDomain, NativeDimension } from './bindings';
+import type { NativeDomain } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { Dimension } from './dimension';

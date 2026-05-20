@@ -117,7 +117,7 @@ describe('VFS', () => {
         // should never reach here
         expect(false).toBe(true);
     } catch (e: any) {
-        expect(e).toBeInstanceOf(Error);
+        expect(e).toBeInstanceOf(TileDBError);
         expect(e.message).toContain('Failed to open file via VFS');
     }
   });

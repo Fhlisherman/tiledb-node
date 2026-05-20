@@ -56,6 +56,15 @@ export const Stats = {
   }
 };
 
+function rethrowAsTileDBError(e: any): never {
+  if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
+    const tde = new TileDBError(e.message);
+    tde.stack = e.stack;
+    throw tde;
+  }
+  throw e;
+}
+
 function wrapErrors(target: any, prop: string, descriptor: PropertyDescriptor) {
   const original = descriptor.value;
   if (typeof original !== 'function') return;
@@ -63,23 +72,11 @@ function wrapErrors(target: any, prop: string, descriptor: PropertyDescriptor) {
     try {
       const res = original.apply(this, args);
       if (res && typeof res.catch === 'function') {
-        return res.catch((e: any) => {
-          if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
-            const tde = new TileDBError(e.message);
-            tde.stack = e.stack;
-            throw tde;
-          }
-          throw e;
-        });
+        return res.catch((e: any) => rethrowAsTileDBError(e));
       }
       return res;
     } catch (e: any) {
-      if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
-        const tde = new TileDBError(e.message);
-        tde.stack = e.stack;
-        throw tde;
-      }
-      throw e;
+      rethrowAsTileDBError(e);
     }
   };
 }
@@ -91,12 +88,7 @@ function wrapGetter(target: any, prop: string, descriptor: PropertyDescriptor) {
     try {
       return originalGet.apply(this);
     } catch(e: any) {
-      if (e && e.name !== 'TileDBError' && typeof e.message === 'string' && e.message.includes('[TileDB::')) {
-        const tde = new TileDBError(e.message);
-        tde.stack = e.stack;
-        throw tde;
-      }
-      throw e;
+      rethrowAsTileDBError(e);
     }
   };
 }

@@ -1,4 +1,4 @@
-import type { NativeQuery, NativeSubarray, QueryConditionOp, QueryConditionCombinationOp, MetadataValue, Datatype, QueryStatus, QueryType } from './bindings';
+import type { NativeQuery, MetadataValue, Datatype, QueryStatus, QueryType } from './bindings';
 import { nativeData } from './native';
 import type { Context } from './context';
 import type { TileDBArray } from './array';
